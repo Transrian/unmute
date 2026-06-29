@@ -53,7 +53,7 @@ services:
 
   tts:
     image: moshi-server:latest
-    command: ["worker", "--config", "configs/tts.toml"]
+    command: ["worker", "--config", "configs/tts-custom.toml"]
     build:
       context: services/moshi-server
       dockerfile: public_prebuild.Dockerfile
