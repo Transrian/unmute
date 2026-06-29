@@ -36,7 +36,7 @@ services:
     command: ["worker", "--config", "configs/tts-custom.toml"]
     build:
       context: services/moshi-server
-      dockerfile: public_prebuild.Dockerfile
+      dockerfile: public_custom.Dockerfile
       args:
         CUDA_COMPUTE_CAP: "80"
     volumes:
@@ -55,7 +55,7 @@ services:
     command: ["worker", "--config", "configs/stt.toml"]
     build:
       context: services/moshi-server
-      dockerfile: public_prebuild.Dockerfile
+      dockerfile: public_custom.Dockerfile
       args:
         CUDA_COMPUTE_CAP: "80"
     volumes:

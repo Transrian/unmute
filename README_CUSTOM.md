@@ -25,7 +25,7 @@ KYUTAI_LLM_API_KEY=<your-api-key>
 ## Key Differences from Standard Setup
 
 - **No self-hosted LLM** — uses an external LLM endpoint instead of a local vLLM container
-- **Pre-built TTS/STT images** — uses `public_prebuild.Dockerfile` with `CUDA_COMPUTE_CAP=80`
+- **Pre-built TTS/STT images** — uses `public_custom.Dockerfile` with `CUDA_COMPUTE_CAP=80`
 - **GPU pinned** — TTS and STT are assigned to GPU 1 only (`device_ids: ["1"]`)
 
 ## Running

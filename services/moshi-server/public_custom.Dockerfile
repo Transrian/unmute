@@ -64,7 +64,7 @@ COPY . .
 # Ensure the startup script is runnable inside the container.
 # This prevents script errors that can happen if the project was cloned on Windows,
 # which uses a different text file format (CRLF) than the Linux environment in the container (LF).
-RUN dos2unix ./start_moshi_server_public_prebuild.sh && chmod +x ./start_moshi_server_public_prebuild.sh
+RUN dos2unix ./start_moshi_server_public_custom.sh && chmod +x ./start_moshi_server_public_custom.sh
 
 HEALTHCHECK --start-period=15s \
     CMD curl --fail http://localhost:8080/api/build_info || exit 1
@@ -72,4 +72,4 @@ HEALTHCHECK --start-period=15s \
 EXPOSE 8080
 ENV RUST_BACKTRACE=1
 
-ENTRYPOINT ["./start_moshi_server_public_prebuild.sh"]
+ENTRYPOINT ["./start_moshi_server_public_custom.sh"]
