@@ -61,7 +61,6 @@ services:
         CUDA_COMPUTE_CAP: "80"
     volumes:
       - ./volumes/hf-cache:/root/.cache/huggingface
-      - /tmp/models/:/models
       - ./volumes/tts-logs:/tmp/unmute_logs
     deploy:
       resources:
@@ -81,7 +80,6 @@ services:
         CUDA_COMPUTE_CAP: "80"
     volumes:
       - ./volumes/hf-cache:/root/.cache/huggingface
-      - /tmp/models/:/models
       - ./volumes/stt-logs:/tmp/unmute_logs
     deploy:
       resources:
