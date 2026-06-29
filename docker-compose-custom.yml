@@ -1,17 +1,6 @@
 # See NOTE comments for places to modify.
 services:
 
-  traefik:
-    image: traefik:latest
-    command:
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--entrypoints.web.address=:80"
-    ports:
-      - "80:80"
-    volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock:ro"
-
   frontend:
     image: unmute-frontend:latest
     build:
@@ -19,12 +8,10 @@ services:
       dockerfile: hot-reloading.Dockerfile
     volumes:
       - ./frontend/src:/app/src
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.frontend.rule=PathPrefix(`/`)"
-      - "traefik.http.routers.frontend.entrypoints=web"
-      - "traefik.http.services.frontend.loadbalancer.server.port=3000"
-      - "traefik.http.routers.frontend.priority=10"
+    environment:
+      - NEXT_PUBLIC_IN_DOCKER=false
+    ports:
+      - "3000:3000"
 
   backend:
     image: unmute-backend:latest
@@ -39,16 +26,9 @@ services:
       - KYUTAI_LLM_URL=${KYUTAI_LLM_URL}
       - KYUTAI_LLM_MODEL=${KYUTAI_LLM_MODEL}
       - KYUTAI_LLM_API_KEY=${KYUTAI_LLM_API_KEY}
-
+    ports:
+      - "8000:80"
     labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.backend.rule=PathPrefix(`/api`)"
-      - "traefik.http.routers.backend.middlewares=strip-api"
-      - "traefik.http.middlewares.strip-api.replacepathregex.regex=^/api/(.*)"
-      - "traefik.http.middlewares.strip-api.replacepathregex.replacement=/$$1"
-      - "traefik.http.routers.backend.entrypoints=web"
-      - "traefik.http.services.backend.loadbalancer.server.port=80"
-      - "traefik.http.routers.backend.priority=100" # higher priority than frontend
       - "prometheus-port=80"
 
   tts:
@@ -91,4 +71,3 @@ services:
 
 networks:
   default:
-
