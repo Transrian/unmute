@@ -72,9 +72,8 @@ unmute/                          ← Root
 │   │   ├── tts/                 ← Text-to-Speech client + voice management
 │   │   │   ├── text_to_speech.py    ← TTS WebSocket client (msgpack protocol, realtime queue)
 │   │   │   ├── realtime_queue.py    ← Time-aware queue for audio/text synchronization
-│   │   │   ├── voice_cloning.py     ← Voice cloning via external server + cache
-│   │   │   ├── voices.py            ← VoiceList loader (voices.yaml parser, upload utilities)
-│   │   │   └── ...                  ← Voice donation pipeline scripts
+│   │   │   ├── voices.py            ← VoiceList loader (voices.yaml parser)
+│   │   │   └── ...                  ← Voice management scripts
 │   │   │
 │   │   ├── llm/                 ← LLM integration
 │   │   │   ├── chatbot.py             ← Chat history management, conversation state machine
@@ -175,14 +174,12 @@ Browser microphone
 | `useAudioProcessor.ts` | Audio capture, Opus encoding, playback decoding |
 | `useMicrophoneAccess.ts` | Microphone permission handling |
 | `useBackendServerUrl.ts` | Backend URL resolution (Docker vs local) |
-| `useKeyboardShortcuts.ts` | Keyboard shortcuts (S=subtitles, D=dev mode) |
+| `useKeyboardShortcuts.ts` | Keyboard shortcuts (S=subtitles) |
 | `audioUtil.ts` | Opus encode/decode helpers |
 | `chatHistory.ts` | Chat message compression utilities |
-| `VoiceRecorder.tsx` / `VoiceUpload.tsx` | Voice cloning upload UI |
 | `CouldNotConnect.tsx` | Error screen when backend is unreachable |
 | `ConsentModal.tsx` | Recording consent dialog |
 | `useRecordingCanvas.ts` | Canvas-based conversation recording |
-| `voice-donation/` | Voice donation sub-pages |
 | `ErrorMessages.tsx` | Toast-style error message display (auto-dismiss after 10s) |
 | `layout.tsx` | Root layout — sets page metadata, loads Satoshi font, mounts ConsentModal |
 | `page.tsx` | Home page — renders the `<Unmute />` component |
@@ -190,13 +187,11 @@ Browser microphone
 | `SingleRoleSubtitles.tsx` | Subtitles for a single speaker with word-wrapping and max line count |
 | `SlantedButton.tsx` | Stylized button with slanted (skewed) border (primary/secondary/disabled) |
 | `SquareButton.tsx` | Square-cornered button with dashed border (primary/primaryOff/secondary) |
-| `TrimmedAudioPreview.tsx` | Audio preview player for uploaded voice clips (10s max playback) |
 | `UnmuteHeader.tsx` | Header bar with title, Kyutai logo, and "More info" modal |
 | `VoiceAttribution.tsx` | Voice source attribution display (file description or Freesound link) |
 | `cssUtil.ts` | Helper to read CSS custom properties (`getCSSVariable()`) |
 | `opus-recorder.d.ts` | TypeScript type declarations for the `opus-recorder` package |
 | `useAudioVisualizerCircle.ts` | Canvas-based audio visualizer hook (frequency-reactive circle drawing) |
-| `useGoogleAnalytics.ts` | GA event tracking for conversation start/end and recording downloads |
 | `useLocalStorage.ts` | `useState` hook synced with `localStorage` persistence |
 | `useWakeLock.ts` | Prevents screen sleep during active conversations (Screen Wake Lock API) |
 
