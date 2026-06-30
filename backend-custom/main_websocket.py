@@ -198,14 +198,16 @@ async def _transcribe_one_shot(audio_data: bytes, filename: str) -> str:
 
     # Collect messages from STT in a background task
     messages: list[STTWordMessage] = []
+    collect_error: Exception | None = None
 
     async def _collect_messages():
+        nonlocal collect_error
         try:
             async for msg in stt:
                 if isinstance(msg, STTWordMessage):
                     messages.append(msg)
-        except Exception:
-            logger.exception("Error in STT message collector")
+        except Exception as e:
+            collect_error = e
 
     collect_task = asyncio.create_task(_collect_messages())
 
@@ -236,11 +238,15 @@ async def _transcribe_one_shot(audio_data: bytes, filename: str) -> str:
         # which causes the __aiter__ iterator to finish naturally.
         await stt.send_end_of_audio()
     finally:
-        # Wait for the collector to finish (iterator ends when server closes)
         await collect_task
         await stt.shutdown()
 
-    # Extract text from word messages
+    if collect_error:
+        raise RuntimeError("STT message collector failed") from collect_error
+
+    if not messages:
+        raise RuntimeError("STT returned no words")
+
     return " ".join(m.text for m in messages)
 
 
@@ -254,14 +260,16 @@ async def _synthesize_one_shot(text: str, voice: str) -> tuple[np.ndarray, int]:
     await tts.start_up()
 
     audio_chunks: list[list[float]] = []
+    collect_error: Exception | None = None
 
     async def _collect_audio():
+        nonlocal collect_error
         try:
             async for msg in tts:
                 if isinstance(msg, TTSAudioMessage):
                     audio_chunks.append(msg.pcm)
-        except Exception:
-            logger.exception("Error in TTS audio collector")
+        except Exception as e:
+            collect_error = e
 
     collect_task = asyncio.create_task(_collect_audio())
 
@@ -273,7 +281,11 @@ async def _synthesize_one_shot(text: str, voice: str) -> tuple[np.ndarray, int]:
         # which ends the __aiter__ iterator and drains the output queue.
         await collect_task
     finally:
+        # tts.__aiter__ already calls shutdown(), this is idempotent.
         await tts.shutdown()
+
+    if collect_error:
+        raise RuntimeError("TTS audio collector failed") from collect_error
 
     if not audio_chunks:
         return np.array([], dtype=np.float32), SAMPLE_RATE

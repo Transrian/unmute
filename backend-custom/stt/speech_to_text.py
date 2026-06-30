@@ -218,9 +218,9 @@ class SpeechToText(ServiceWithStartup):
                         # Not sure why Pyright complains about non-exhaustive match
                         raise ValueError(f"Unknown message: {message}")
 
-        except websockets.ConnectionClosedOK:
-            # The server closes the connection once we send \0, and this actually shows
-            # up as a websockets.ConnectionClosedError.
+        except websockets.ConnectionClosed:
+            # The server closes the connection once we send \0 (no close frame),
+            # which shows up as ConnectionClosedError rather than ConnectionClosedOK.
             pass
         finally:
             self.shutdown_complete.set()
