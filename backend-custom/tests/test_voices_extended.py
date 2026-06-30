@@ -64,7 +64,7 @@ class TestVoiceListUploadToServer:
         # Patch download and upload functions
         with patch("unmute.tts.voices.download_sound") as mock_download:
             with patch("unmute.tts.voices.find_enhanced_version", return_value=None):
-                with patch("unmute.tts.voices.upload_voice_to_dev", new=AsyncMock()):
+                with patch("unmute.tts.voices.upload_voice_to_dev", new=MagicMock()):
                     with patch("unmute.tts.voices.OUTPUT_DIR", tmp_path):
                         # Create the expected file
                         voice_file = tmp_path / "voices" / "a.wav"
@@ -89,7 +89,7 @@ class TestVoiceListUploadToServer:
 
         with patch("unmute.tts.voices.download_sound") as mock_download:
             with patch("unmute.tts.voices.find_enhanced_version", return_value=None):
-                with patch("unmute.tts.voices.upload_voice_to_dev", new=AsyncMock()) as mock_upload:
+                with patch("unmute.tts.voices.upload_voice_to_dev", new=MagicMock()) as mock_upload:
                     await vl.upload_to_server()
                     mock_upload.assert_not_called()
 

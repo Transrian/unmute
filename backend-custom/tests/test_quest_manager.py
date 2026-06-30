@@ -22,7 +22,7 @@ class TestQuest:
         # Run the quest
         async with quest:
             await asyncio.sleep(0.01)
-            run_called.wait()
+            await run_called.wait()
 
     @pytest.mark.asyncio
     async def test_quest_with_init(self):
