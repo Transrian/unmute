@@ -3,15 +3,10 @@
 from unittest.mock import patch
 
 from unmute.llm.system_prompt import (
-    ANIMALS_EASY,
-    ANIMALS_HARD,
     CONVERSATION_STARTER_SUGGESTIONS,
     ConstantInstructions,
-    GuessAnimalInstructions,
-    NewsInstructions,
     QuizShowInstructions,
     SmalltalkInstructions,
-    UnmuteExplanationInstructions,
     get_default_instructions,
     get_readable_llm_name,
 )
@@ -98,27 +93,6 @@ class TestSmalltalkInstructions:
             assert found
 
 
-class TestGuessAnimalInstructions:
-    def test_type(self):
-        instructions = GuessAnimalInstructions()
-        assert instructions.type == "guess_animal"
-
-    def test_make_system_prompt_has_animal(self):
-        with patch("unmute.llm.system_prompt.autoselect_model", return_value="test-model"):
-            instructions = GuessAnimalInstructions()
-            prompt = instructions.make_system_prompt()
-            # Should contain an animal from the easy list
-            found = any(animal in prompt for animal in ANIMALS_EASY)
-            assert found
-
-    def test_make_system_prompt_has_hard_animal(self):
-        with patch("unmute.llm.system_prompt.autoselect_model", return_value="test-model"):
-            instructions = GuessAnimalInstructions()
-            prompt = instructions.make_system_prompt()
-            found = any(animal in prompt for animal in ANIMALS_HARD)
-            assert found
-
-
 class TestQuizShowInstructions:
     def test_type(self):
         instructions = QuizShowInstructions()
@@ -139,68 +113,6 @@ class TestQuizShowInstructions:
             assert "quiz show" in prompt.lower()
 
 
-class TestNewsInstructions:
-    def test_type(self):
-        instructions = NewsInstructions()
-        assert instructions.type == "news"
-
-    def test_make_system_prompt_fallback(self):
-        """When news API fails, it should fall back to smalltalk."""
-        with (
-            patch("unmute.llm.system_prompt.autoselect_model", return_value="test-model"),
-            patch("unmute.llm.system_prompt.get_news", return_value=None),
-        ):
-            instructions = NewsInstructions()
-            prompt = instructions.make_system_prompt()
-            assert "error" in prompt.lower() or "something else" in prompt.lower()
-
-    def test_make_system_prompt_with_news(self):
-        from unmute.llm.newsapi import Article, NewsResponse, Source
-
-        fake_news = NewsResponse(
-            status="ok",
-            totalResults=1,
-            articles=[
-                Article(
-                    source=Source(id="verge", name="The Verge"),
-                    author="Test",
-                    title="Test Article",
-                    description="Test description",
-                    publishedAt="2024-01-01",
-                    content="Test content",
-                )
-            ],
-        )
-
-        with (
-            patch("unmute.llm.system_prompt.autoselect_model", return_value="test-model"),
-            patch("unmute.llm.system_prompt.get_news", return_value=fake_news),
-        ):
-            instructions = NewsInstructions()
-            prompt = instructions.make_system_prompt()
-            assert "Test Article" in prompt
-
-
-class TestUnmuteExplanationInstructions:
-    def test_type(self):
-        instructions = UnmuteExplanationInstructions()
-        assert instructions.type == "unmute_explanation"
-
-    def test_make_system_prompt(self):
-        with patch("unmute.llm.system_prompt.autoselect_model", return_value="test-model"):
-            instructions = UnmuteExplanationInstructions()
-            prompt = instructions.make_system_prompt()
-            assert "test model" in prompt
-            assert "Kyutai" in prompt
-            assert "speech-to-text" in prompt
-
-    def test_make_system_prompt_has_unmute_explanation(self):
-        with patch("unmute.llm.system_prompt.autoselect_model", return_value="test-model"):
-            instructions = UnmuteExplanationInstructions()
-            prompt = instructions.make_system_prompt()
-            assert "modular AI system" in prompt
-
-
 class TestSystemPromptTemplate:
     def test_common_elements(self):
         """All instruction types should produce prompts with common elements."""
@@ -208,9 +120,7 @@ class TestSystemPromptTemplate:
             for cls in [
                 ConstantInstructions,
                 SmalltalkInstructions,
-                GuessAnimalInstructions,
                 QuizShowInstructions,
-                UnmuteExplanationInstructions,
             ]:
                 instructions = cls()
                 prompt = instructions.make_system_prompt()

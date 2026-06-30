@@ -52,15 +52,10 @@ unmute/                          ← Root
 │   │   ├── kyutai_constants.py  ← Environment variable constants (server URLs, sample rate, etc.)
 │   │   ├── openai_realtime_api_events.py ← WebSocket message type definitions (Pydantic models)
 │   │   ├── quest_manager.py     ← Async task lifecycle manager (init → run → close pattern)
-│   │   ├── service_discovery.py ← Service instance discovery (DNS-based, Redis optional)
-│   │   ├── cache.py             ← Cache abstraction (Local dict or Redis)
+│   │   ├── service_discovery.py ← Service instance discovery (DNS-based)
 │   │   ├── exceptions.py        ← Custom exception types
-│   │   ├── metrics.py           ← Prometheus metrics definitions
 │   │   ├── timer.py             ← Stopwatch utilities
 │   │   ├── websocket_utils.py   ← HTTP↔WS URL conversion helpers
-│   │   ├── webrtc_utils.py      ← WebRTC utilities
-│   │   ├── audio_input_override.py  ← Debug: inject audio file instead of mic
-│   │   ├── audio_stream_saver.py    ← Audio stream persistence
 │   │   │
 │   │   ├── stt/                 ← Speech-to-Text client
 │   │   │   ├── speech_to_text.py          ← STT WebSocket client (msgpack protocol, VAD pause prediction)
@@ -70,18 +65,15 @@ unmute/                          ← Root
 │   │   ├── tts/                 ← Text-to-Speech client + voice management
 │   │   │   ├── text_to_speech.py    ← TTS WebSocket client (msgpack protocol, realtime queue)
 │   │   │   ├── realtime_queue.py    ← Time-aware queue for audio/text synchronization
-│   │   │   ├── voices.py            ← VoiceList loader (voices.yaml parser)
-│   │   │   └── ...                  ← Voice management scripts
+│   │   │   └── voices.py            ← VoiceList loader (voices.yaml parser)
 │   │   │
 │   │   ├── llm/                 ← LLM integration
 │   │   │   ├── chatbot.py             ← Chat history management, conversation state machine
 │   │   │   ├── llm_utils.py           ← OpenAI client wrapper, VLLMStream, message preprocessing
-│   │   │   ├── system_prompt.py       ← System prompt templates (smalltalk, quiz, news, etc.)
-│   │   │   ├── newsapi.py             ← News fetching from The Verge via NewsAPI
+│   │   │   ├── system_prompt.py       ← System prompt templates (constant, smalltalk, quiz_show)
 │   │   │   └── quiz_show_questions.py ← Quiz show question bank
 │   │   │
-│   │   ├── loadtest/            ← Load testing tools
-│   │   └── scripts/             ← Utility scripts (examples, voice management)
+│   │   └── tests/               ← Unit tests for the unmute package
 │
 ├── services/                    ← External service configs and Dockerfiles
 │   ├── moshi-server/            ← Kyutai's moshi-server (Rust binary, STT+TTS)
@@ -184,12 +176,10 @@ Browser microphone
 | `SlantedButton.tsx` | Stylized button with slanted (skewed) border (primary/secondary/disabled) |
 | `SquareButton.tsx` | Square-cornered button with dashed border (primary/primaryOff/secondary) |
 | `UnmuteHeader.tsx` | Header bar with title, Kyutai logo, and "More info" modal |
-| `VoiceAttribution.tsx` | Voice source attribution display (file description or Freesound link) |
 | `cssUtil.ts` | Helper to read CSS custom properties (`getCSSVariable()`) |
 | `opus-recorder.d.ts` | TypeScript type declarations for the `opus-recorder` package |
 | `useAudioVisualizerCircle.ts` | Canvas-based audio visualizer hook (frequency-reactive circle drawing) |
 | `useLocalStorage.ts` | `useState` hook synced with `localStorage` persistence |
-| `useWakeLock.ts` | Prevents screen sleep during active conversations (Screen Wake Lock API) |
 
 ---
 
@@ -226,7 +216,7 @@ Interruption flow: `interrupt_bot()` cancels TTS + LLM quests, clears output que
 Each voice entry has:
 - `name`: Display name
 - `good`: Whether to include in the frontend voice list
-- `instructions`: LLM system prompt type (`constant`, `smalltalk`, `quiz_show`, `guess_animal`, `news`, `unmute_explanation`)
+- `instructions`: LLM system prompt type (`constant`, `smalltalk`, `quiz_show`)
 - `source`: Voice audio file location (`file` or `freesound` type with `path_on_server`)
 
 Instructions are loaded by `VoiceList` and sent to the backend via `session.update` WebSocket message. The backend's `Chatbot` builds the full system prompt from the instruction type.

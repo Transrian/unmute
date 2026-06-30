@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import VoiceAttribution from "./VoiceAttribution";
 import SquareButton from "./SquareButton";
 import Modal from "./Modal";
 import { ArrowUpRight } from "lucide-react";
@@ -15,7 +14,6 @@ export type ConstantInstructions = {
 export type Instructions =
   | ConstantInstructions
   | { type: "smalltalk"; language?: LanguageCode }
-  | { type: "guess_animal"; language?: LanguageCode }
   | { type: "quiz_show"; language?: LanguageCode };
 
 export type UnmuteConfig = {
@@ -74,13 +72,8 @@ const instructionsToPlaceholder = (instructions: Instructions) => {
       {
         smalltalk:
           "Make pleasant conversation. (For this character, the instructions contain dynamically generated parts.)",
-        guess_animal:
-          "Make the user guess the animal. (For this character, the instructions contain dynamically generated parts.)",
         quiz_show:
           "You're a quiz show host that hates his job. (For this character, the instructions contain dynamically generated parts.)",
-        news: "Talk about the latest tech news. (For this character, we fetch the news from the internet dynamically.)",
-        unmute_explanation:
-          "Explain how Unmute works. (For this character, the instructions are long so we don't show them here in full.)",
       }[instructions.type] || ""
     );
   }
@@ -232,7 +225,6 @@ const UnmuteConfigurator = ({
             <p>
               The voice of the text-to-speech is based on a 10-second sample.
             </p>
-            {activeVoice && <VoiceAttribution voice={activeVoice} />}
           </Modal>
           <div className="h-0.5 bg-gray grow hidden md:visible"></div>
         </div>

@@ -123,7 +123,6 @@ class TestUnmuteHandlerReceive:
             handler = UnmuteHandler()
             handler.chatbot = MagicMock()
             handler.chatbot.conversation_state.return_value = "bot_speaking"
-            handler.audio_input_override = None
 
             fake_stt = MagicMock()
             fake_stt.send_audio = AsyncMock()
@@ -149,7 +148,6 @@ class TestUnmuteHandlerReceive:
             handler = UnmuteHandler()
             handler.chatbot = MagicMock()
             handler.chatbot.conversation_state.return_value = "user_speaking"
-            handler.audio_input_override = None
 
             fake_stt = MagicMock()
             fake_stt.send_audio = AsyncMock()
@@ -183,7 +181,6 @@ class TestUnmuteHandlerReceive:
                 {"role": "user", "content": "hi"},
                 {"role": "assistant", "content": "hello"},
             ]
-            handler.audio_input_override = None
 
             fake_stt = MagicMock()
             fake_stt.send_audio = AsyncMock()
@@ -217,7 +214,6 @@ class TestUnmuteHandlerReceive:
                 {"role": "system", "content": "test"},
                 {"role": "user", "content": "hi"},
             ]
-            handler.audio_input_override = None
 
             fake_stt = MagicMock()
             fake_stt.send_audio = AsyncMock()

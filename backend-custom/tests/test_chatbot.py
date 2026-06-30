@@ -5,7 +5,6 @@ import pytest
 from unmute.llm.chatbot import Chatbot
 from unmute.llm.system_prompt import (
     ConstantInstructions,
-    GuessAnimalInstructions,
     SmalltalkInstructions,
 )
 

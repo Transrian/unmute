@@ -17,7 +17,6 @@ os.environ.setdefault("KYUTAI_LLM_MODEL", "test-model")
 os.environ.pop("KYUTAI_LLM_API_KEY", None)
 os.environ.pop("KYUTAI_STT_URL", None)
 os.environ.pop("KYUTAI_TTS_URL", None)
-os.environ.pop("KYUTAI_REDIS_URL", None)
 os.environ.pop("NEWSAPI_API_KEY", None)
 os.environ.pop("FREESOUND_API_KEY", None)
 
@@ -227,16 +226,4 @@ def fake_llm_response() -> list[str]:
     return ["Hello there!"]
 
 
-@pytest.fixture(autouse=True)
-def _reset_metrics():
-    """Reset prometheus metrics before each test to avoid cross-test pollution."""
-    from prometheus_client import REGISTRY
 
-    # Collect and remove all collectors
-    collectors = list(REGISTRY._collector_to_names.keys())
-    for collector in collectors:
-        try:
-            REGISTRY.unregister(collector)
-        except Exception:
-            pass
-    yield

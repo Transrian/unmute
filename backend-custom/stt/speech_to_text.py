@@ -9,7 +9,6 @@ import websockets
 from fastrtc import audio_to_float32
 from pydantic import BaseModel, TypeAdapter
 
-from unmute import metrics as mt
 from unmute.exceptions import MissingServiceAtCapacity
 from unmute.kyutai_constants import (
     FRAME_TIME_SEC,
@@ -111,7 +110,6 @@ class SpeechToText(ServiceWithStartup):
 
         self.sent_samples += len(audio)
         self.time_since_first_audio_sent.start_if_not_started()
-        mt.STT_SENT_FRAMES.inc()
 
         await self._send({"type": "Audio", "pcm": audio.tolist()})
 
@@ -139,7 +137,6 @@ class SpeechToText(ServiceWithStartup):
             message_dict = msgpack.unpackb(message_bytes)  # type: ignore
             message = STTMessageAdapter.validate_python(message_dict)
             if isinstance(message, STTReadyMessage):
-                mt.STT_ACTIVE_SESSIONS.inc()
                 return
             elif isinstance(message, STTErrorMessage):
                 raise MissingServiceAtCapacity("stt")
@@ -158,12 +155,6 @@ class SpeechToText(ServiceWithStartup):
         logger.info("Shutting down STT, receiving last messages")
         if self.shutdown_complete.is_set():
             return
-
-        mt.STT_ACTIVE_SESSIONS.dec()
-        if self.time_since_first_audio_sent.started:
-            mt.STT_SESSION_DURATION.observe(self.time_since_first_audio_sent.time())
-            mt.STT_AUDIO_DURATION.observe(self.sent_samples / SAMPLE_RATE)
-            mt.STT_NUM_WORDS.observe(self.received_words)
 
         if not self.websocket:
             raise RuntimeError("STT websocket not connected")
@@ -191,21 +182,17 @@ class SpeechToText(ServiceWithStartup):
 
                 match message:
                     case STTWordMessage():
-                        num_words = len(message.text.split())
-                        mt.STT_RECV_WORDS.inc(num_words)
                         self.received_words += 1
                         yield message
                     case STTEndWordMessage():
                         continue
                     case STTStepMessage():
                         self.current_time += FRAME_TIME_SEC
-                        mt.STT_RECV_FRAMES.inc()
                         if (
                             self.waiting_first_step
                             and self.time_since_first_audio_sent.started
                         ):
                             self.waiting_first_step = False
-                            mt.STT_TTFT.observe(self.time_since_first_audio_sent.time())
                         if n_steps_to_wait > 0:
                             n_steps_to_wait -= 1
                         else:

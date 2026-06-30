@@ -10,7 +10,6 @@ from collections import defaultdict
 from collections.abc import Awaitable
 from functools import partial, wraps
 
-from unmute import metrics as mt
 from unmute.exceptions import MissingServiceAtCapacity, MissingServiceTimeout
 from unmute.kyutai_constants import LLM_SERVER, STT_SERVER, TTS_SERVER
 from unmute.timer import Stopwatch
@@ -93,16 +92,7 @@ async def find_instance(
                 logger.info(
                     f"[{service_name}] Instance {instance} took {elapsed * 1000:.1f}ms to reject us."
                 )
-                if service_name == "tts":
-                    mt.TTS_PING_TIME.observe(elapsed)
-                elif service_name == "stt":
-                    mt.STT_PING_TIME.observe(elapsed)
             else:
-                mt.HARD_SERVICE_MISSES.inc()
-                if service_name == "tts":
-                    mt.TTS_HARD_MISSES.inc()
-                elif service_name == "stt":
-                    mt.STT_HARD_MISSES.inc()
                 if isinstance(exc, TimeoutError):
                     logger.warning(
                         f"[{service_name}] Instance {instance} did not reply in time."
@@ -114,11 +104,6 @@ async def find_instance(
             if max_trials > 0:
                 continue
             else:
-                mt.SERVICE_MISSES.inc()
-                if service_name == "tts":
-                    mt.TTS_MISSES.inc()
-                elif service_name == "stt":
-                    mt.STT_MISSES.inc()
                 if isinstance(exc, MissingServiceAtCapacity):
                     raise
                 else:
@@ -130,16 +115,7 @@ async def find_instance(
         logger.info(
             f"[{service_name}] Instance {instance} took {elapsed * 1000:.1f}ms to accept us."
         )
-
-        if service_name == "tts":
-            mt.TTS_PING_TIME.observe(elapsed)
-        elif service_name == "stt":
-            mt.STT_PING_TIME.observe(elapsed)
         elapsed = stopwatch.time()
-        if service_name == "tts":
-            mt.TTS_FIND_TIME.observe(elapsed)
-        elif service_name == "stt":
-            mt.STT_FIND_TIME.observe(elapsed)
         logger.info(
             f"[{service_name}] Connection to {instance} took {1000 * elapsed:.1f}ms."
         )

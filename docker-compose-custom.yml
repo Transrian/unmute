@@ -2,6 +2,7 @@
 services:
 
   frontend:
+    restart: unless-stopped
     image: unmute-frontend:latest
     build:
       context: frontend-custom/
@@ -14,6 +15,7 @@ services:
       - "3000:3000"
 
   backend:
+    restart: unless-stopped
     image: unmute-backend:latest
     build:
       context: backend-custom/
@@ -32,6 +34,7 @@ services:
       - "prometheus-port=80"
 
   tts:
+    restart: unless-stopped
     image: moshi-server:latest
     command: ["worker", "--config", "configs/tts-custom.toml"]
     build:
@@ -51,6 +54,7 @@ services:
               capabilities: [gpu]
 
   stt:
+    restart: unless-stopped
     image: moshi-server:latest
     command: ["worker", "--config", "configs/stt.toml"]
     build:

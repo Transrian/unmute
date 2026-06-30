@@ -8,7 +8,6 @@ import websockets
 from pydantic import BaseModel, Field, TypeAdapter
 
 import unmute.openai_realtime_api_events as ora
-from unmute import metrics as mt
 from unmute.exceptions import MissingServiceAtCapacity
 from unmute.kyutai_constants import (
     FRAME_TIME_SEC,
@@ -188,7 +187,6 @@ class TextToSpeech(ServiceWithStartup):
                 if message.text == "":
                     return  # Don't send empty messages
 
-                mt.TTS_SENT_FRAMES.inc()
                 self.time_since_first_text_sent.start_if_not_started()
 
             await self.websocket.send(msgpack.packb(message.model_dump()))
@@ -229,10 +227,6 @@ class TextToSpeech(ServiceWithStartup):
         async with self.shutdown_lock:
             if self.shutdown_complete.is_set():
                 return
-            mt.TTS_ACTIVE_SESSIONS.dec()
-            mt.TTS_AUDIO_DURATION.observe(self.received_samples / SAMPLE_RATE)
-            if self.time_since_first_text_sent.started:
-                mt.TTS_GEN_DURATION.observe(self.time_since_first_text_sent.time())
 
             # Set before closing the websocket so that __aiter__ knows we're closing
             # the connection intentionally
@@ -247,8 +241,6 @@ class TextToSpeech(ServiceWithStartup):
     async def __aiter__(self) -> AsyncIterator[TTSMessage]:
         if self.websocket is None:
             raise RuntimeError("TTS websocket not connected")
-        mt.TTS_SESSIONS.inc()
-        mt.TTS_ACTIVE_SESSIONS.inc()
 
         output_queue: RealtimeQueue[TTSMessage] = RealtimeQueue()
 
@@ -261,14 +253,12 @@ class TextToSpeech(ServiceWithStartup):
                     # Use `yield message` if you want to to release the audio
                     # as fast as it's being generated. However, it might desynchronize
                     # the text and the audio.
-                    mt.TTS_RECV_FRAMES.inc()
                     if (
                         self.waiting_first_audio
                         and self.time_since_first_text_sent.started
                     ):
                         self.waiting_first_audio = False
                         ttft = self.time_since_first_text_sent.time()
-                        mt.TTS_TTFT.observe(ttft)
                         logger.info("Time to first token is %.1f ms", ttft * 1000)
                     output_queue.start_if_not_started()
                     output_queue.put(
@@ -277,7 +267,6 @@ class TextToSpeech(ServiceWithStartup):
                     self.received_samples += len(message.pcm)
 
                 elif isinstance(message, TTSTextMessage):
-                    mt.TTS_RECV_WORDS.inc()
                     if message == TTSTextMessage(
                         type="Text", text="", start_s=0, stop_s=0
                     ):

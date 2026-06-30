@@ -35,23 +35,6 @@
       username: tender_buttons
       license: http://creativecommons.org/licenses/by/3.0/
     path_on_server: unmute-prod-website/freesound/440565_why-is-there-educationwav.mp3
-- name: Dev (news)
-  good: true
-  instructions:
-    type: news
-  source:
-    source_type: file
-    path_on_server: unmute-prod-website/developer-1.mp3
-    description: This is the voice of Václav Volhejn from Kyutai.
-- name: Explanation
-  good: true
-  instructions:
-    type: unmute_explanation
-  source:
-    source_type: file
-    path_on_server: unmute-prod-website/ex04_narration_longform_00001.wav
-    description: This voice comes from the Expresso dataset.
-    description_link: https://speechbot.github.io/expresso/
 - name: Charles
   good: true
   instructions:

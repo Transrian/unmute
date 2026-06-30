@@ -1,22 +1,9 @@
 """Extended tests for tts/voices.py to increase coverage."""
 
-import tempfile
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
-
-
-class TestTextToSpeechNonStreaming:
-    @pytest.mark.asyncio
-    async def test_cache_file_path_generation(self):
-        """Cache file path should include voice, text hash, and cfg param."""
-        import numpy as np
-        from unmute.tts.voices import TTS_OUTPUT_CACHE_DIR
-
-        # We can't test the full flow without a real TTS server,
-        # but we can test that the cache path is generated correctly
-        assert TTS_OUTPUT_CACHE_DIR.name == "tts-outputs"
 
 
 class TestVoiceSampleDiscriminator:
@@ -30,87 +17,17 @@ class TestVoiceSampleDiscriminator:
         assert isinstance(voice.source, FileVoiceSource)
 
     def test_freesound_source_discriminator(self):
-        from unmute.tts.freesound_download import FreesoundVoiceSource
-        from unmute.tts.voices import VoiceSample
+        from unmute.tts.voices import FreesoundVoiceSource, VoiceSample
 
         voice = VoiceSample(
             name="Test",
             source=FreesoundVoiceSource(
                 url="https://freesound.org/sounds/12345/",
                 path_on_server="free/test.wav",
+                sound_instance={"id": 12345, "name": "test", "username": "user", "license": "CC-BY"},
             ),
         )
         assert isinstance(voice.source, FreesoundVoiceSource)
-
-
-class TestVoiceListUploadToServer:
-    @pytest.mark.asyncio
-    async def test_uploads_good_voices(self, tmp_path: Path):
-        """Good voices should be processed."""
-        from unittest.mock import AsyncMock
-        from unmute.tts.voices import FileVoiceSource, VoiceList, VoiceSample
-        from ruamel.yaml import YAML
-
-        voices_yaml = tmp_path / "voices.yaml"
-        voices_yaml.write_text("")
-
-        vl = VoiceList()
-        vl.path = voices_yaml
-        vl.voices = [
-            VoiceSample(name="Good", good=True, source=FileVoiceSource(path_on_server="a.wav")),
-            VoiceSample(name="Bad", good=False, source=FileVoiceSource(path_on_server="b.wav")),
-        ]
-
-        # Patch download and upload functions
-        with patch("unmute.tts.voices.download_sound") as mock_download:
-            with patch("unmute.tts.voices.find_enhanced_version", return_value=None):
-                with patch("unmute.tts.voices.upload_voice_to_dev", new=MagicMock()):
-                    with patch("unmute.tts.voices.OUTPUT_DIR", tmp_path):
-                        # Create the expected file
-                        voice_file = tmp_path / "voices" / "a.wav"
-                        voice_file.parent.mkdir(exist_ok=True)
-                        voice_file.touch()
-
-                        await vl.upload_to_server()
-
-    @pytest.mark.asyncio
-    async def test_skips_bad_voices(self, tmp_path: Path):
-        """Bad voices should be skipped."""
-        from unmute.tts.voices import FileVoiceSource, VoiceList, VoiceSample
-
-        voices_yaml = tmp_path / "voices.yaml"
-        voices_yaml.write_text("")
-
-        vl = VoiceList()
-        vl.path = voices_yaml
-        vl.voices = [
-            VoiceSample(name="Bad", good=False, source=FileVoiceSource(path_on_server="b.wav")),
-        ]
-
-        with patch("unmute.tts.voices.download_sound") as mock_download:
-            with patch("unmute.tts.voices.find_enhanced_version", return_value=None):
-                with patch("unmute.tts.voices.upload_voice_to_dev", new=MagicMock()) as mock_upload:
-                    await vl.upload_to_server()
-                    mock_upload.assert_not_called()
-
-    @pytest.mark.asyncio
-    async def test_raises_for_missing_file_source(self, tmp_path: Path):
-        """Should raise FileNotFoundError for missing file sources."""
-        from unmute.tts.voices import FileVoiceSource, VoiceList, VoiceSample
-
-        voices_yaml = tmp_path / "voices.yaml"
-        voices_yaml.write_text("")
-
-        vl = VoiceList()
-        vl.path = voices_yaml
-        vl.voices = [
-            VoiceSample(name="Good", good=True, source=FileVoiceSource(path_on_server="missing.wav")),
-        ]
-
-        with patch("unmute.tts.voices.find_enhanced_version", return_value=None):
-            with patch("unmute.tts.voices.OUTPUT_DIR", tmp_path):
-                with pytest.raises(FileNotFoundError):
-                    await vl.upload_to_server()
 
 
 class TestVoiceListSave:
@@ -157,56 +74,6 @@ class TestVoiceListSave:
         assert saved[0]["name"] == "Good"
         assert saved[1]["name"] == "Undecided"
         assert saved[2]["name"] == "Bad"
-
-
-class TestFindEnhancedVersion:
-    def test_returns_enhanced_path_when_exists(self, tmp_path: Path):
-        from unmute.tts.voices import find_enhanced_version
-
-        enhanced_dir = tmp_path / "voices-clean"
-        enhanced_dir.mkdir()
-        (enhanced_dir / "test-enhanced-v2.wav").touch()
-
-        with patch("unmute.tts.voices.OUTPUT_DIR", tmp_path):
-            original_path = tmp_path / "test.wav"
-            original_path.touch()
-            result = find_enhanced_version(original_path)
-            assert result == enhanced_dir / "test-enhanced-v2.wav"
-
-    def test_returns_none_when_not_exists(self, tmp_path: Path):
-        from unmute.tts.voices import find_enhanced_version
-
-        with patch("unmute.tts.voices.OUTPUT_DIR", tmp_path):
-            original_path = tmp_path / "test.wav"
-            original_path.touch()
-            result = find_enhanced_version(original_path)
-            assert result is None
-
-
-class TestUploadVoiceToDev:
-    def test_calls_rsync(self):
-        from unmute.tts.voices import upload_voice_to_dev
-
-        local_path = Path("/tmp/test.wav")
-        path_on_server = "voices/test.wav"
-
-        with patch("unmute.tts.voices.subprocess_with_retries") as mock_rsync:
-            upload_voice_to_dev(local_path, path_on_server)
-            mock_rsync.assert_called_once()
-            call_args = mock_rsync.call_args[0][0]
-            assert call_args[0] == "rsync"
-            assert call_args[1] == local_path
-
-
-class TestCopyVoiceToProd:
-    def test_calls_scp(self):
-        from unmute.tts.voices import copy_voice_to_prod
-
-        with patch("unmute.tts.voices.subprocess_with_retries") as mock_scp:
-            with patch("builtins.print"):
-                copy_voice_to_prod("test_voice")
-                # Should be called for both .safetensors and without
-                assert mock_scp.call_count == 2
 
 
 class TestTtsMessageAdapter:

@@ -1,12 +1,10 @@
 import datetime
-import json
 import random
 from typing import Annotated, Literal, Union
 
 from pydantic import BaseModel, Field
 
 from unmute.llm.llm_utils import autoselect_model
-from unmute.llm.newsapi import get_news
 from unmute.llm.quiz_show_questions import QUIZ_SHOW_QUESTIONS
 
 _SYSTEM_PROMPT_BASICS = """
@@ -175,80 +173,6 @@ class SmalltalkInstructions(BaseModel):
         )
 
 
-GUESS_ANIMAL_INSTRUCTIONS = """
-You're playing a game with the user where you're thinking of an animal and they have
-to guess what it is using yes/no questions. Explain this game in your first message.
-
-Refuse to answer questions that are not yes/no questions, but also try to answer ones
-that are subjective (like "Is it cute?"). Make your responses more than just a plain
-"yes" or "no" and rephrase the user's question. E.g. "does it have four legs"
--> "Yup, four legs.".
-
-Your chosen animal is: {animal_easy}. If the user guesses it, you can propose another
-round with a harder animal. For that one, use this animal: {animal_hard}.
-Remember not to tell them the animal unless they guess it.
-YOU are answering the questions, THE USER is asking them.
-"""
-
-ANIMALS_EASY = [
-    "Dog",
-    "Cat",
-    "Horse",
-    "Elephant",
-    "Lion",
-    "Tiger",
-    "Bear",
-    "Monkey",
-    "Giraffe",
-    "Zebra",
-    "Cow",
-    "Pig",
-    "Rabbit",
-    "Fox",
-    "Wolf",
-]
-
-ANIMALS_HARD = [
-    "Porcupine",
-    "Flamingo",
-    "Platypus",
-    "Sloth",
-    "Hedgehog",
-    "Koala",
-    "Penguin",
-    "Octopus",
-    "Raccoon",
-    "Panda",
-    "Chameleon",
-    "Beaver",
-    "Peacock",
-    "Kangaroo",
-    "Skunk",
-    "Walrus",
-    "Anteater",
-    "Capybara",
-    "Toucan",
-]
-
-
-class GuessAnimalInstructions(BaseModel):
-    type: Literal["guess_animal"] = "guess_animal"
-    language: LanguageCode | None = None
-
-    def make_system_prompt(self) -> str:
-        additional_instructions = GUESS_ANIMAL_INSTRUCTIONS.format(
-            animal_easy=random.choice(ANIMALS_EASY),
-            animal_hard=random.choice(ANIMALS_HARD),
-        )
-
-        return _SYSTEM_PROMPT_TEMPLATE.format(
-            _SYSTEM_PROMPT_BASICS=_SYSTEM_PROMPT_BASICS,
-            additional_instructions=additional_instructions,
-            language_instructions=LANGUAGE_CODE_TO_INSTRUCTIONS[self.language],
-            llm_name=get_readable_llm_name(),
-        )
-
-
 QUIZ_SHOW_INSTRUCTIONS = """
 You're a quiz show host, something like "Jeopardy!" or "Who Wants to Be a Millionaire?".
 The user is a contestant and you're asking them questions.
@@ -292,96 +216,11 @@ class QuizShowInstructions(BaseModel):
         )
 
 
-NEWS_INSTRUCTIONS = """
-You talk about tech news with the user. Say that this is what you do and use one of the
-articles from The Verge as a conversation starter.
-
-If they ask (no need to mention this unless asked, and do not mention in the first message):
-- You have a few headlines from The Verge but not the full articles.
-- If the user asks for more details that you don't have available, tell them to go to The Verge directly to read the full article.
-- You use "news API dot org" to get the news.
-
-It's currently {current_time} in your timezone ({timezone}).
-
-The news:
-{news}
-"""
-
-
-class NewsInstructions(BaseModel):
-    type: Literal["news"] = "news"
-    language: LanguageCode | None = None
-
-    def make_system_prompt(self) -> str:
-        news = get_news()
-
-        if not news:
-            # Fallback if we couldn't get news
-            return SmalltalkInstructions().make_system_prompt(
-                additional_instructions=_DEFAULT_ADDITIONAL_INSTRUCTIONS
-                + "\n\nYou were supposed to talk about the news, but there was an error "
-                "and you couldn't retrieve it. Explain and offer to talk about something else.",
-            )
-
-        articles = news.articles[:10]
-        random.shuffle(articles)  # to avoid bias of the LLM
-        articles_serialized = json.dumps([article.model_dump() for article in articles])
-
-        return _SYSTEM_PROMPT_TEMPLATE.format(
-            _SYSTEM_PROMPT_BASICS=_SYSTEM_PROMPT_BASICS,
-            additional_instructions=NEWS_INSTRUCTIONS.format(
-                news=articles_serialized,
-                current_time=datetime.datetime.now().strftime("%A, %B %d, %Y at %H:%M"),
-                timezone=datetime.datetime.now().astimezone().tzname(),
-            ),
-            language_instructions=LANGUAGE_CODE_TO_INSTRUCTIONS[self.language],
-            llm_name=get_readable_llm_name(),
-        )
-
-
-UNMUTE_EXPLANATION_INSTRUCTIONS = """
-In the first message, say you're here to answer questions about Unmute,
-explain that this is the system they're talking to right now.
-Ask if they want a basic introduction, or if they have specific questions.
-
-Before explaining something more technical, ask the user how much they know about things of that kind (e.g. TTS).
-
-If there is a question to which you don't know the answer, it's ok to say you don't know.
-If there is some confusion or surprise, note that you're an LLM and might make mistakes.
-
-Here is Kyutai's statement about Unmute:
-Talk to Unmute, the most modular voice AI around. Empower any text LLM with voice, instantly, by wrapping it with our new speech-to-text and text-to-speech. Any personality, any voice.
-The speech-to-text, speech-to-text, and this website itself are open-source, check kyutai dot org.
-
-“But what about Moshi?” Last year we unveiled Moshi, the first audio-native model. While Moshi provides unmatched latency and naturalness, it doesn't yet match the extended abilities of text models such as function-calling, stronger reasoning capabilities, and in-context learning. Unmute allows us to directly bring all of these from text to real-time voice conversations.
-
-Unmute's speech-to-text is streaming, accurate, and includes a semantic VAD that predicts whether you've actually finished speaking or if you're just pausing mid-sentence, meaning it's low-latency but doesn't interrupt you.
-
-The text LLM's response is passed to our TTS, conditioned on a 10s voice sample. We'll provide access to the voice cloning model in a controlled way. The TTS is also streaming *in text*, reducing the latency by starting to speak even before the full text response is generated.
-The voice cloning model is not open-sourced directly, but we have a large database of voices and you can add more by donating your voice.
-"""
-
-
-class UnmuteExplanationInstructions(BaseModel):
-    type: Literal["unmute_explanation"] = "unmute_explanation"
-
-    def make_system_prompt(self) -> str:
-        return _SYSTEM_PROMPT_TEMPLATE.format(
-            _SYSTEM_PROMPT_BASICS=_SYSTEM_PROMPT_BASICS,
-            additional_instructions=UNMUTE_EXPLANATION_INSTRUCTIONS,
-            language_instructions=LANGUAGE_CODE_TO_INSTRUCTIONS["en"],
-            llm_name=get_readable_llm_name(),
-        )
-
-
 Instructions = Annotated[
     Union[
         ConstantInstructions,
         SmalltalkInstructions,
-        GuessAnimalInstructions,
         QuizShowInstructions,
-        NewsInstructions,
-        UnmuteExplanationInstructions,
     ],
     Field(discriminator="type"),
 ]

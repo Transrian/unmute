@@ -2,7 +2,6 @@ import asyncio
 import math
 from functools import partial
 from logging import getLogger
-from pathlib import Path
 from typing import Any, Literal, cast
 
 import numpy as np
@@ -14,8 +13,6 @@ from fastrtc import (
     wait_for_item,
 )
 import unmute.openai_realtime_api_events as ora
-from unmute import metrics as mt
-from unmute.audio_input_override import AudioInputOverride
 from unmute.exceptions import make_ora_error
 from unmute.kyutai_constants import (
     FRAME_TIME_SEC,
@@ -41,13 +38,7 @@ from unmute.tts.text_to_speech import (
     TTSTextMessage,
 )
 
-# TTS_DEBUGGING_TEXT: str | None = "What's 'Hello world'?"
-# TTS_DEBUGGING_TEXT: str | None = "What's the difference between a bagel and a donut?"
-TTS_DEBUGGING_TEXT = None
 
-# AUDIO_INPUT_OVERRIDE: Path | None = Path.home() / "audio/dog-or-cat-3.mp3"
-AUDIO_INPUT_OVERRIDE: Path | None = None
-DEBUG_PLOT_HISTORY_SEC = 10.0
 
 USER_SILENCE_TIMEOUT = 7.0
 FIRST_MESSAGE_TEMPERATURE = 0.7
@@ -88,11 +79,6 @@ class UnmuteHandler(AsyncStreamHandler):
         self.openai_client = get_openai_client()
 
         self.turn_transition_lock = asyncio.Lock()
-
-        if AUDIO_INPUT_OVERRIDE is not None:
-            self.audio_input_override = AudioInputOverride(AUDIO_INPUT_OVERRIDE)
-        else:
-            self.audio_input_override = None
 
     @property
     def stt(self) -> SpeechToText | None:
@@ -165,9 +151,6 @@ class UnmuteHandler(AsyncStreamHandler):
         num_words_sent = sum(
             len(message.get("content", "").split()) for message in messages
         )
-        mt.VLLM_SENT_WORDS.inc(num_words_sent)
-        mt.VLLM_REQUEST_LENGTH.observe(num_words_sent)
-        mt.VLLM_ACTIVE_SESSIONS.inc()
 
         try:
             async for delta in rechunk_to_words(llm.chat_completion(messages)):
@@ -175,12 +158,10 @@ class UnmuteHandler(AsyncStreamHandler):
                     ora.UnmuteResponseTextDeltaReady(delta=delta)
                 )
 
-                mt.VLLM_RECV_WORDS.inc()
                 response_words.append(delta)
 
                 if time_to_first_token is None:
                     time_to_first_token = llm_stopwatch.time()
-                    mt.VLLM_TTFT.observe(time_to_first_token)
                     logger.info("Sending first word to TTS: %s", delta)
 
                 self.tts_output_stopwatch.start_if_not_started()
@@ -205,17 +186,12 @@ class UnmuteHandler(AsyncStreamHandler):
                 logger.info("Sending TTS EOS.")
                 await tts.send(TTSClientEosMessage())
         except asyncio.CancelledError:
-            mt.VLLM_INTERRUPTS.inc()
             raise
         except Exception:
             if not error_from_tts:
-                mt.VLLM_HARD_ERRORS.inc()
-            raise
+                raise
         finally:
             logger.info("End of VLLM, after %d words.", len(response_words))
-            mt.VLLM_ACTIVE_SESSIONS.dec()
-            mt.VLLM_REPLY_LENGTH.observe(len(response_words))
-            mt.VLLM_GEN_DURATION.observe(llm_stopwatch.time())
 
     def audio_received_sec(self) -> float:
         """How much audio has been received in seconds. Used instead of time.time().
@@ -239,20 +215,6 @@ class UnmuteHandler(AsyncStreamHandler):
             # Periodically update this not to trigger the "long silence" accidentally.
             self.waiting_for_user_start_time = self.audio_received_sec()
 
-        if TTS_DEBUGGING_TEXT is not None:
-            assert self.audio_input_override is None, (
-                "Can't use both TTS_DEBUGGING_TEXT and audio input override."
-            )
-
-            # Debugging mode: always send a fixed string when it's the user's turn.
-            if self.chatbot.conversation_state() == "waiting_for_user":
-                logger.info("Using TTS debugging text. Ignoring microphone.")
-                self.chatbot.chat_history.append(
-                    {"role": "user", "content": TTS_DEBUGGING_TEXT}
-                )
-                await self._generate_response()
-            return
-
         if (
             len(self.chatbot.chat_history) == 1
             # Wait until the instructions are updated. A bit hacky
@@ -260,9 +222,6 @@ class UnmuteHandler(AsyncStreamHandler):
         ):
             logger.info("Generating initial response.")
             await self._generate_response()
-
-        if self.audio_input_override is not None:
-            frame = (frame[0], self.audio_input_override.override(frame[1]))
 
         await stt.send_audio(array)
         if self.stt_end_of_flush_time is None:

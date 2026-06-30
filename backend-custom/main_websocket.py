@@ -18,7 +18,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.websockets import WebSocketState
 from fastrtc import CloseStream, audio_to_float32
-from prometheus_fastapi_instrumentator import Instrumentator
 from pydantic import BaseModel, Field, TypeAdapter, ValidationError, computed_field
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
@@ -26,7 +25,6 @@ from starlette.responses import Response
 from starlette.types import ASGIApp
 
 import unmute.openai_realtime_api_events as ora
-from unmute import metrics as mt
 from unmute.exceptions import (
     MissingServiceAtCapacity,
     MissingServiceTimeout,
@@ -58,8 +56,6 @@ logging.basicConfig(
 # server handle more. This is to avoid the GIL.
 MAX_CLIENTS = 4
 SEMAPHORE = asyncio.Semaphore(MAX_CLIENTS)
-
-Instrumentator().instrument(app).expose(app)
 
 ClientEventAdapter = TypeAdapter(
     Annotated[ora.ClientEvent, Field(discriminator="type")]
@@ -150,7 +146,6 @@ async def _get_health(
 @app.get("/v1/health")
 async def get_health():
     health = await _get_health(None)
-    mt.HEALTH_OK.observe(health.ok)
     return health
 
 
@@ -169,8 +164,6 @@ def voices():
 
 @app.websocket("/v1/realtime")
 async def websocket_route(websocket: WebSocket):
-    mt.SESSIONS.inc()
-    mt.ACTIVE_SESSIONS.inc()
     session_watch = Stopwatch()
 
     async with SEMAPHORE:
@@ -189,8 +182,7 @@ async def websocket_route(websocket: WebSocket):
         except Exception as exc:
             await _report_websocket_exception(websocket, exc)
         finally:
-            mt.ACTIVE_SESSIONS.dec()
-            mt.SESSION_DURATION.observe(session_watch.time())
+            pass
 
 
 async def _report_websocket_exception(websocket: WebSocket, exc: Exception):
@@ -203,13 +195,11 @@ async def _report_websocket_exception(websocket: WebSocket, exc: Exception):
 
     for exc in exceptions:
         if isinstance(exc, (MissingServiceAtCapacity)):
-            mt.FATAL_SERVICE_MISSES.inc()
             error_message = (
                 f"Too many people are connected to service '{exc.service}'. "
                 "Please try again later."
             )
         elif isinstance(exc, MissingServiceTimeout):
-            mt.FATAL_SERVICE_MISSES.inc()
             error_message = (
                 f"Service '{exc.service}' timed out. Please try again later."
             )
@@ -217,12 +207,9 @@ async def _report_websocket_exception(websocket: WebSocket, exc: Exception):
             logger.debug("Websocket was closed.")
         else:
             logger.exception("Unexpected error: %r", exc)
-            mt.HARD_ERRORS.inc()
-            error_message = "Internal server error :( Complain to Kyutai"
+            error_message = "Internal server error"
 
     if error_message is not None:
-        mt.FORCE_DISCONNECTS.inc()
-
         try:
             await websocket.send_text(
                 make_ora_error(type="fatal", message=error_message).model_dump_json()

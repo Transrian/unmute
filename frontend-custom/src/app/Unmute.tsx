@@ -15,7 +15,6 @@ import CouldNotConnect, { HealthStatus } from "./CouldNotConnect";
 import UnmuteHeader from "./UnmuteHeader";
 import Subtitles from "./Subtitles";
 import { ChatMessage, compressChatHistory } from "./chatHistory";
-import useWakeLock from "./useWakeLock";
 import ErrorMessages, { ErrorItem, makeErrorItem } from "./ErrorMessages";
 import clsx from "clsx";
 import { useBackendServerUrl } from "./useBackendServerUrl";
@@ -35,8 +34,6 @@ const Unmute = () => {
   const [webSocketUrl, setWebSocketUrl] = useState<string | null>(null);
   const [healthStatus, setHealthStatus] = useState<HealthStatus | null>(null);
   const [errors, setErrors] = useState<ErrorItem[]>([]);
-
-  useWakeLock(shouldConnect);
 
   // Check if the backend server is healthy. If we setHealthStatus to null,
   // a "server is down" screen will be shown.

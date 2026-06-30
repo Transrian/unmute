@@ -12,10 +12,7 @@ dependencies = [
     "openai>=1.70.0",
     "plotly>=6.0.1",
     "sphn>=0.2.0",
-    "prometheus-fastapi-instrumentator==7.1.0",
-    "prometheus-client==0.21.0",
     "ruamel-yaml>=0.18.10",
-    "redis>=6.0.0",
     "unidecode>=1.4.0",
     # av is a transitive dependency, but older versions no longer ship wheels so we need to set the minimum version
     "av>=16.0.0",
