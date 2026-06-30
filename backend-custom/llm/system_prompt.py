@@ -217,11 +217,7 @@ class QuizShowInstructions(BaseModel):
 
 
 Instructions = Annotated[
-    Union[
-        ConstantInstructions,
-        SmalltalkInstructions,
-        QuizShowInstructions,
-    ],
+    ConstantInstructions | SmalltalkInstructions | QuizShowInstructions,
     Field(discriminator="type"),
 ]
 

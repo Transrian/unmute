@@ -9,7 +9,6 @@ import websockets
 from fastrtc import (
     AsyncStreamHandler,
     CloseStream,
-    audio_to_float32,
     wait_for_item,
 )
 import unmute.openai_realtime_api_events as ora
@@ -102,11 +101,10 @@ class UnmuteHandler(AsyncStreamHandler):
         role: Literal["user", "assistant"],
         generating_message_i: int | None = None,  # Avoid race conditions
     ):
-        is_new_message = await self.chatbot.add_chat_message_delta(
+        return await self.chatbot.add_chat_message_delta(
             delta, role, generating_message_i=generating_message_i
         )
 
-        return is_new_message
 
     async def _generate_response(self):
         # Empty message to signal we've started responding.
@@ -273,10 +271,7 @@ class UnmuteHandler(AsyncStreamHandler):
             stt.sent_samples / self.input_sample_rate
         ) - self.stt_last_message_time
 
-        if stt.pause_prediction.value > 0.6:
-            return True
-        else:
-            return False
+        return stt.pause_prediction.value > 0.6
 
     async def emit(  # pyright: ignore[reportIncompatibleMethodOverride]
         self,

@@ -2,14 +2,13 @@
 
 import io
 import wave
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 
 from unmute.main_websocket import app
-from unmute.stt.speech_to_text import STTWordMessage
 
 
 @pytest.fixture

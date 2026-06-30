@@ -4,7 +4,6 @@ Tests preprocess_messages_for_llm, rechunk_to_words, VLLMStream, autoselect_mode
 and other utility functions.
 """
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest

@@ -7,6 +7,7 @@ import numpy as np
 import pytest
 
 from unmute.kyutai_constants import SAMPLE_RATE, SAMPLES_PER_FRAME
+import contextlib
 
 
 def _patch_handler_deps():
@@ -266,10 +267,8 @@ class TestUnmuteHandlerSttLoop:
                 task = asyncio.create_task(handler._stt_loop(fake_stt))
                 await asyncio.sleep(0.1)
                 task.cancel()
-                try:
+                with contextlib.suppress(asyncio.CancelledError):
                     await task
-                except asyncio.CancelledError:
-                    pass
 
             await run_stt_loop()
 
@@ -298,10 +297,8 @@ class TestUnmuteHandlerSttLoop:
                 task = asyncio.create_task(handler._stt_loop(fake_stt))
                 await asyncio.sleep(0.1)
                 task.cancel()
-                try:
+                with contextlib.suppress(asyncio.CancelledError):
                     await task
-                except asyncio.CancelledError:
-                    pass
 
             await run_stt_loop()
 
@@ -331,10 +328,8 @@ class TestUnmuteHandlerSttLoop:
                 task = asyncio.create_task(handler._stt_loop(fake_stt))
                 await asyncio.sleep(0.1)
                 task.cancel()
-                try:
+                with contextlib.suppress(asyncio.CancelledError):
                     await task
-                except asyncio.CancelledError:
-                    pass
 
             await run_stt_loop()
             assert add_calls == []
@@ -364,10 +359,8 @@ class TestUnmuteHandlerSttLoop:
                 task = asyncio.create_task(handler._stt_loop(fake_stt))
                 await asyncio.sleep(0.1)
                 task.cancel()
-                try:
+                with contextlib.suppress(asyncio.CancelledError):
                     await task
-                except asyncio.CancelledError:
-                    pass
 
             with patch.object(handler, "interrupt_bot", new=AsyncMock()) as mock_interrupt:
                 await run_stt_loop()
@@ -432,10 +425,8 @@ class TestUnmuteHandlerTtsLoop:
                 task = asyncio.create_task(handler._tts_loop(fake_tts, generating_message_i))
                 await asyncio.sleep(0.2)
                 task.cancel()
-                try:
+                with contextlib.suppress(asyncio.CancelledError):
                     await task
-                except asyncio.CancelledError:
-                    pass
 
             await run_tts_loop()
 
@@ -467,10 +458,8 @@ class TestUnmuteHandlerTtsLoop:
                 task = asyncio.create_task(handler._tts_loop(fake_tts, 1))
                 await asyncio.sleep(0.1)
                 task.cancel()
-                try:
+                with contextlib.suppress(asyncio.CancelledError):
                     await task
-                except asyncio.CancelledError:
-                    pass
 
             await run_tts_loop()
 
@@ -512,7 +501,6 @@ class TestUnmuteHandlerGenerateResponseTask:
 
             with patch("unmute.unmute_handler.VLLMStream", return_value=fake_vllm_instance):
                 with patch.object(handler, "start_up_tts", new=AsyncMock()) as mock_tts:
-                    from unmute.quest_manager import Quest
                     fake_quest = MagicMock()
                     fake_quest.get = AsyncMock(side_effect=fake_tts_init)
                     mock_tts.return_value = fake_quest
@@ -521,10 +509,8 @@ class TestUnmuteHandlerGenerateResponseTask:
                         task = asyncio.create_task(handler._generate_response_task())
                         await asyncio.sleep(0.2)
                         task.cancel()
-                        try:
+                        with contextlib.suppress(asyncio.CancelledError):
                             await task
-                        except asyncio.CancelledError:
-                            pass
 
                     await run_task()
 

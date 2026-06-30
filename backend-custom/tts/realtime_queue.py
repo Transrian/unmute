@@ -1,7 +1,8 @@
 import asyncio
 import heapq
 from dataclasses import dataclass, field
-from typing import AsyncIterable, Callable, Iterable, TypeVar
+from typing import TypeVar
+from collections.abc import AsyncIterable, Callable, Iterable
 
 T = TypeVar("T")
 

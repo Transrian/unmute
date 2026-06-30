@@ -1,9 +1,7 @@
 """Tests for audio_codec.py: decode/encode helpers for /v1/audio endpoints."""
 
 import io
-import struct
 import wave
-from unittest.mock import AsyncMock, MagicMock, patch
 
 import numpy as np
 import pytest

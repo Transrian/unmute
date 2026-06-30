@@ -1,7 +1,6 @@
 """Tests for stt/speech_to_text.py: STT message types and SpeechToText class."""
 
-import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import numpy as np
 import pytest

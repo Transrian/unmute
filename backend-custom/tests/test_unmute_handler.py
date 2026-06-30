@@ -1,13 +1,11 @@
 """Tests for unmute_handler.py: UnmuteHandler (selected methods)."""
 
 import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
-import numpy as np
 import pytest
 
-from unmute.kyutai_constants import SAMPLE_RATE, SAMPLES_PER_FRAME
-from unmute.quest_manager import Quest, QuestManager
+from unmute.kyutai_constants import SAMPLE_RATE
 
 
 def _patch_handler_deps():

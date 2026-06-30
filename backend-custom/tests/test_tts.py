@@ -1,6 +1,5 @@
 """Tests for tts/text_to_speech.py: TTS message types, prepare_text_for_tts."""
 
-import pytest
 
 from unmute.tts.text_to_speech import (
     TTSAudioMessage,

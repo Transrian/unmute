@@ -1,13 +1,13 @@
 import asyncio
 import urllib.parse
 from logging import getLogger
-from typing import Annotated, Any, AsyncIterator, Callable, Literal, Union, cast
+from typing import Annotated, Any, Literal, Union, cast
+from collections.abc import AsyncIterator, Callable
 
 import msgpack
 import websockets
 from pydantic import BaseModel, Field, TypeAdapter
 
-import unmute.openai_realtime_api_events as ora
 from unmute.exceptions import MissingServiceAtCapacity
 from unmute.kyutai_constants import (
     FRAME_TIME_SEC,
@@ -44,7 +44,7 @@ class TTSClientEosMessage(BaseModel):
 
 
 TTSClientMessage = Annotated[
-    Union[TTSClientTextMessage, TTSClientVoiceMessage, TTSClientEosMessage],
+    TTSClientTextMessage | TTSClientVoiceMessage | TTSClientEosMessage,
     Field(discriminator="type"),
 ]
 TTSClientMessageAdapter = TypeAdapter(TTSClientMessage)
@@ -72,7 +72,7 @@ class TTSReadyMessage(BaseModel):
 
 
 TTSMessage = Annotated[
-    Union[TTSTextMessage, TTSAudioMessage, TTSErrorMessage, TTSReadyMessage],
+    TTSTextMessage | TTSAudioMessage | TTSErrorMessage | TTSReadyMessage,
     Field(discriminator="type"),
 ]
 TTSMessageAdapter = TypeAdapter(TTSMessage)
@@ -100,9 +100,8 @@ def prepare_text_for_tts(text: str) -> str:
 
     text = text.replace("“", '"').replace("”", '"')
     text = text.replace("‘", "'").replace("’", "'")
-    text = text.replace(" : ", " ")
+    return text.replace(" : ", " ")
 
-    return text
 
 
 class TtsStreamingQuery(BaseModel):
@@ -158,14 +157,13 @@ class TextToSpeech(ServiceWithStartup):
     def state(self) -> WebsocketState:
         if not self.websocket:
             return "not_created"
-        else:
-            d: dict[websockets.protocol.State, WebsocketState] = {
-                websockets.protocol.State.CONNECTING: "connecting",
-                websockets.protocol.State.OPEN: "connected",
-                websockets.protocol.State.CLOSING: "closing",
-                websockets.protocol.State.CLOSED: "closed",
-            }
-            return d[self.websocket.state]
+        d: dict[websockets.protocol.State, WebsocketState] = {
+            websockets.protocol.State.CONNECTING: "connecting",
+            websockets.protocol.State.OPEN: "connected",
+            websockets.protocol.State.CLOSING: "closing",
+            websockets.protocol.State.CLOSED: "closed",
+        }
+        return d[self.websocket.state]
 
     async def send(self, message: str | TTSClientMessage) -> None:
         """Send a message to the TTS server.
@@ -208,12 +206,11 @@ class TextToSpeech(ServiceWithStartup):
                 message = TTSMessageAdapter.validate_python(message_dict)
                 if isinstance(message, TTSReadyMessage):
                     return
-                elif isinstance(message, TTSErrorMessage):
+                if isinstance(message, TTSErrorMessage):
                     raise MissingServiceAtCapacity("tts")
-                else:
-                    logger.warning(
-                        f"Received unexpected message type from {self.tts_instance}, {message.type}"
-                    )
+                logger.warning(
+                    f"Received unexpected message type from {self.tts_instance}, {message.type}"
+                )
         except Exception as e:
             logger.error(f"Error during TTS startup: {repr(e)}")
             # Make sure we don't leave a dangling websocket connection

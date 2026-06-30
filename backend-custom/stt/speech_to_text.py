@@ -1,7 +1,8 @@
 import asyncio
 import random
 from logging import getLogger
-from typing import AsyncIterator, Literal, Union
+from typing import Literal, Union
+from collections.abc import AsyncIterator
 
 import msgpack
 import numpy as np
@@ -13,7 +14,6 @@ from unmute.exceptions import MissingServiceAtCapacity
 from unmute.kyutai_constants import (
     FRAME_TIME_SEC,
     HEADERS,
-    SAMPLE_RATE,
     SPEECH_TO_TEXT_PATH,
     STT_DELAY_SEC,
     STT_SERVER,
@@ -92,14 +92,13 @@ class SpeechToText(ServiceWithStartup):
     def state(self) -> WebsocketState:
         if not self.websocket:
             return "not_created"
-        else:
-            d: dict[websockets.protocol.State, WebsocketState] = {
-                websockets.protocol.State.CONNECTING: "connecting",
-                websockets.protocol.State.OPEN: "connected",
-                websockets.protocol.State.CLOSING: "closing",
-                websockets.protocol.State.CLOSED: "closed",
-            }
-            return d[self.websocket.state]
+        d: dict[websockets.protocol.State, WebsocketState] = {
+            websockets.protocol.State.CONNECTING: "connecting",
+            websockets.protocol.State.OPEN: "connected",
+            websockets.protocol.State.CLOSING: "closing",
+            websockets.protocol.State.CLOSED: "closed",
+        }
+        return d[self.websocket.state]
 
     async def send_audio(self, audio: np.ndarray) -> None:
         if audio.ndim != 1:
@@ -149,12 +148,11 @@ class SpeechToText(ServiceWithStartup):
             message = STTMessageAdapter.validate_python(message_dict)
             if isinstance(message, STTReadyMessage):
                 return
-            elif isinstance(message, STTErrorMessage):
+            if isinstance(message, STTErrorMessage):
                 raise MissingServiceAtCapacity("stt")
-            else:
-                raise RuntimeError(
-                    f"Expected ready or error message, got {message.type}"
-                )
+            raise RuntimeError(
+                f"Expected ready or error message, got {message.type}"
+            )
         except Exception as e:
             logger.error(f"Error during STT startup: {repr(e)}")
             # Make sure we don't leave a dangling websocket connection

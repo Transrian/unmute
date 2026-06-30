@@ -6,7 +6,8 @@ latency.
 
 import asyncio
 from logging import getLogger
-from typing import AsyncIterator, Literal
+from typing import Literal
+from collections.abc import AsyncIterator
 
 import numpy as np
 

@@ -103,14 +103,11 @@ async def find_instance(
                     )
             if max_trials > 0:
                 continue
-            else:
-                if isinstance(exc, MissingServiceAtCapacity):
-                    raise
-                else:
-                    if isinstance(exc, TimeoutError):
-                        raise MissingServiceTimeout(service_name) from exc
-                    else:
-                        raise  # Let internal errors propagate
+            if isinstance(exc, MissingServiceAtCapacity):
+                raise
+            if isinstance(exc, TimeoutError):
+                raise MissingServiceTimeout(service_name) from exc
+            raise  # Let internal errors propagate
         elapsed = pingwatch.time()
         logger.info(
             f"[{service_name}] Instance {instance} took {elapsed * 1000:.1f}ms to accept us."

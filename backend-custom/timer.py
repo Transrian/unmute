@@ -20,9 +20,8 @@ class Stopwatch:
 
         if self.end_time is not None:
             return None  # Already stopped
-        else:
-            self.end_time = get_time()
-            return self.end_time - self.start_time
+        self.end_time = get_time()
+        return self.end_time - self.start_time
 
     def time(self) -> float:
         if self.start_time is None:

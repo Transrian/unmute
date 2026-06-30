@@ -156,8 +156,7 @@ async def _get_health(
 
 @app.get("/v1/health")
 async def get_health():
-    health = await _get_health(None)
-    return health
+    return await _get_health(None)
 
 
 @app.get("/v1/voices")
@@ -165,12 +164,11 @@ async def get_health():
 def voices():
     voice_list = VoiceList()
     # Note that `voice.good` is bool | None, here we really take only True values.
-    good_voices = [
+    return [
         voice.model_dump(exclude={"comment"})
         for voice in voice_list.voices
         if voice.good
     ]
-    return good_voices
 
 
 # ─── OpenAI-compatible audio endpoints ──────────────────────────────
@@ -363,10 +361,7 @@ async def websocket_route(websocket: WebSocket):
 
 
 async def _report_websocket_exception(websocket: WebSocket, exc: Exception):
-    if isinstance(exc, ExceptionGroup):
-        exceptions = exc.exceptions
-    else:
-        exceptions = [exc]
+    exceptions = exc.exceptions if isinstance(exc, ExceptionGroup) else [exc]
 
     error_message = None
 
@@ -447,14 +442,14 @@ async def receive_loop(
                 "receive_loop() stopped because WebSocket disconnected: "
                 f"{e.code=} {e.reason=}"
             )
-            raise WebSocketClosedError() from e
+            raise WebSocketClosedError from e
         except RuntimeError as e:
             # This is expected when the client disconnects
             if "WebSocket is not connected" not in str(e):
                 raise  # re-raise unexpected errors
 
             logger.info("receive_loop() stopped because WebSocket disconnected.")
-            raise WebSocketClosedError() from e
+            raise WebSocketClosedError from e
 
         try:
             message: ora.ClientEvent = ClientEventAdapter.validate_json(message_raw)
@@ -499,7 +494,7 @@ async def receive_loop(
             await emit_queue.put(ora.SessionUpdated(session=message.session))
 
         else:
-            logger.info("Ignoring message:", str(message)[:100])
+            logger.info("Ignoring message: %s", str(message)[:100])
 
 
 class EmitDebugLogger:
@@ -536,7 +531,7 @@ async def emit_loop(
             or websocket.client_state == WebSocketState.DISCONNECTED
         ):
             logger.info("emit_loop() stopped because WebSocket disconnected")
-            raise WebSocketClosedError()
+            raise WebSocketClosedError
 
         try:
             to_emit = emit_queue.get_nowait()
@@ -545,11 +540,11 @@ async def emit_loop(
 
             if emitted_by_handler is None:
                 continue
-            elif isinstance(emitted_by_handler, CloseStream):
+            if isinstance(emitted_by_handler, CloseStream):
                 # Close here explicitly so that the receive loop stops too
                 await websocket.close()
                 break
-            elif isinstance(emitted_by_handler, ora.ServerEvent):
+            if isinstance(emitted_by_handler, ora.ServerEvent):
                 to_emit = emitted_by_handler
             else:
                 _sr, audio = emitted_by_handler
@@ -581,7 +576,7 @@ async def emit_loop(
                 )
 
             logger.info(message)
-            raise WebSocketClosedError() from e
+            raise WebSocketClosedError from e
 
 
 def _cors_headers_for_error(request: Request):

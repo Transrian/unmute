@@ -1,7 +1,7 @@
 """Tests for main_websocket.py: FastAPI routes, HTTP endpoints."""
 
 import json
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -11,7 +11,6 @@ from unmute.main_websocket import (
     _ws_to_http,
     app,
     general_exception_handler,
-    voices,
 )
 
 

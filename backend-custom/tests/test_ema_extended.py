@@ -1,6 +1,5 @@
 """Extended tests for stt/exponential_moving_average.py."""
 
-import numpy as np
 import pytest
 
 

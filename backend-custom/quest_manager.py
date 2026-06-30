@@ -8,7 +8,8 @@ import logging
 import types
 from collections.abc import Awaitable
 from functools import partial
-from typing import Any, Callable, TypeVar
+from typing import Any, TypeVar
+from collections.abc import Callable
 
 from unmute.exceptions import (
     MissingServiceAtCapacity,
@@ -61,6 +62,7 @@ class Quest[T]:
     def get_nowait(self) -> T | None:
         if self._data.done():
             return self._data.result()
+        return None
 
     async def _run(self):
         logger.debug("Quest %s init starting...", self.name)

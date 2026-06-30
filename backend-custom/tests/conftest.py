@@ -1,13 +1,8 @@
 """Shared test fixtures and fake services for the Unmute backend test suite."""
 
 import asyncio
-import base64
 import os
-import tempfile
-from pathlib import Path
-from typing import Any, AsyncIterator
 
-import msgpack
 import numpy as np
 import pytest
 
@@ -73,7 +68,7 @@ class FakeSpeechToText:
             self.shutdown_complete.set()
 
     async def __aiter__(self):
-        from unmute.stt.speech_to_text import STTMarkerMessage, STTStepMessage, STTWordMessage
+        from unmute.stt.speech_to_text import STTMarkerMessage, STTWordMessage
 
         FRAME_TIME_SEC = 0.08
         for msg_dict in self.messages:

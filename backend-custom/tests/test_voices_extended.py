@@ -1,9 +1,7 @@
 """Extended tests for tts/voices.py to increase coverage."""
 
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 
-import pytest
 
 
 class TestVoiceSampleDiscriminator:

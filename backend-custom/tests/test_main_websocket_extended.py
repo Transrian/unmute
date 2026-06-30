@@ -4,13 +4,11 @@ import json
 from unittest.mock import MagicMock, patch
 
 import pytest
-from fastapi.testclient import TestClient
 
 from unmute.main_websocket import (
     _check_server_status,
     _cors_headers_for_error,
     _ws_to_http,
-    app,
     EmitDebugLogger,
     general_exception_handler,
 )

@@ -1,7 +1,8 @@
 import re
 from copy import deepcopy
 from functools import cache
-from typing import Any, AsyncIterator, Protocol, cast
+from typing import Any, Protocol, cast
+from collections.abc import AsyncIterator
 
 from openai import AsyncOpenAI, OpenAI
 

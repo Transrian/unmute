@@ -16,10 +16,9 @@ def http_to_ws(url_string: str):
     """
     if url_string.startswith("http://"):
         return "ws://" + url_string[7:]
-    elif url_string.startswith("https://"):
+    if url_string.startswith("https://"):
         return "wss://" + url_string[8:]
-    else:
-        return url_string
+    return url_string
 
 
 def ws_to_http(url_string: str):
@@ -35,7 +34,6 @@ def ws_to_http(url_string: str):
     """
     if url_string.startswith("ws://"):
         return "http://" + url_string[5:]
-    elif url_string.startswith("wss://"):
+    if url_string.startswith("wss://"):
         return "https://" + url_string[6:]
-    else:
-        return url_string
+    return url_string
