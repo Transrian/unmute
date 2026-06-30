@@ -4,10 +4,10 @@ services:
   frontend:
     image: unmute-frontend:latest
     build:
-      context: frontend/
+      context: frontend-custom/
       dockerfile: hot-reloading.Dockerfile
     volumes:
-      - ./frontend/src:/app/src
+      - ./frontend-custom/src:/app/src
     environment:
       - NEXT_PUBLIC_IN_DOCKER=false
     ports:
@@ -19,7 +19,7 @@ services:
       context: ./
       target: hot-reloading
     volumes:
-      - ./unmute:/app/unmute
+      - ./backend-custom:/app/unmute
     environment:
       - KYUTAI_STT_URL=ws://stt:8080
       - KYUTAI_TTS_URL=ws://tts:8080
