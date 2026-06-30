@@ -217,6 +217,21 @@ async def _transcribe_one_shot(audio_data: bytes, filename: str) -> str:
                 chunk = np.pad(chunk, (0, SAMPLES_PER_FRAME - len(chunk)))
             await stt.send_audio(chunk)
 
+        # Flush trailing words: send silence in batches of 0.5 s and stop
+        # as soon as a batch produces no new words from the STT.
+        silence = np.zeros(SAMPLES_PER_FRAME, dtype=np.float32)
+        frames_per_batch = int(0.5 / FRAME_TIME_SEC)
+        max_batches = int(3.0 / 0.5)  # safety cap: ~3 s of silence
+        word_count = len(messages)
+        for _ in range(max_batches):
+            for _ in range(frames_per_batch):
+                await stt.send_audio(silence)
+            await asyncio.sleep(0.1)  # let the collector catch up
+            if len(messages) == word_count:
+                # No new words this batch — STT is done
+                break
+            word_count = len(messages)
+
         # Signal end of audio: the STT server closes the connection on \0,
         # which causes the __aiter__ iterator to finish naturally.
         await stt.send_end_of_audio()
@@ -226,7 +241,7 @@ async def _transcribe_one_shot(audio_data: bytes, filename: str) -> str:
         await stt.shutdown()
 
     # Extract text from word messages
-    return "".join(m.text for m in messages)
+    return " ".join(m.text for m in messages)
 
 
 async def _synthesize_one_shot(text: str, voice: str) -> tuple[np.ndarray, int]:
