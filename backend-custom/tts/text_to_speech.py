@@ -21,7 +21,6 @@ from unmute.recorder import Recorder
 from unmute.service_discovery import ServiceWithStartup
 from unmute.timer import Stopwatch
 from unmute.tts.realtime_queue import RealtimeQueue
-from unmute.tts.voice_cloning import voice_embeddings_cache
 from unmute.websocket_utils import WebsocketState
 
 logger = getLogger(__name__)
@@ -152,11 +151,7 @@ class TextToSpeech(ServiceWithStartup):
 
         self.voice = voice
         self.query = TtsStreamingQuery(
-            voice=self.voice
-            # Don't pass in custom voices as a query parameter, we set it later using
-            # a message
-            if (self.voice and not self.voice.startswith("custom:"))
-            else None,
+            voice=self.voice,
             cfg_alpha=1.5,
         )
 
@@ -213,16 +208,6 @@ class TextToSpeech(ServiceWithStartup):
         logger.debug("Connected to TTS")
 
         try:
-            if self.voice is not None and self.voice.startswith("custom:"):
-                voice_embedding = voice_embeddings_cache.get(self.voice)
-
-                if voice_embedding is not None:
-                    await self.websocket.send(voice_embedding)
-                else:
-                    logger.warning(
-                        f"Custom voice {self.voice} not found, not sending it to TTS"
-                    )
-
             for _ in range(10):
                 # Due to some race condition in the TTS, we might get packets from a previous TTS client.
                 message_bytes = await self.websocket.recv(decode=False)

@@ -6,7 +6,6 @@ import { base64DecodeOpus, base64EncodeOpus } from "./audioUtil";
 import SlantedButton from "@/app/SlantedButton";
 import { useAudioProcessor as useAudioProcessor } from "./useAudioProcessor";
 import useKeyboardShortcuts from "./useKeyboardShortcuts";
-import { prettyPrintJson } from "pretty-print-json";
 import PositionedAudioVisualizer from "./PositionedAudioVisualizer";
 import UnmuteConfigurator, {
   DEFAULT_UNMUTE_CONFIG,
@@ -19,14 +18,12 @@ import { ChatMessage, compressChatHistory } from "./chatHistory";
 import useWakeLock from "./useWakeLock";
 import ErrorMessages, { ErrorItem, makeErrorItem } from "./ErrorMessages";
 import { useRecordingCanvas } from "./useRecordingCanvas";
-import { useGoogleAnalytics } from "./useGoogleAnalytics";
 import clsx from "clsx";
 import { useBackendServerUrl } from "./useBackendServerUrl";
 import { RECORDING_CONSENT_STORAGE_KEY } from "./ConsentModal";
 
 const Unmute = () => {
-  const { isDevMode, showSubtitles } = useKeyboardShortcuts();
-  const [debugDict, setDebugDict] = useState<object | null>(null);
+  const { showSubtitles } = useKeyboardShortcuts();
   const [unmuteConfig, setUnmuteConfig] = useState<UnmuteConfig>(
     DEFAULT_UNMUTE_CONFIG,
   );
@@ -42,10 +39,6 @@ const Unmute = () => {
   const [errors, setErrors] = useState<ErrorItem[]>([]);
 
   useWakeLock(shouldConnect);
-  const { analyticsOnDownloadRecording } = useGoogleAnalytics({
-    shouldConnect,
-    unmuteConfig,
-  });
 
   // Check if the backend server is healthy. If we setHealthStatus to null,
   // a "server is down" screen will be shown.
@@ -72,10 +65,6 @@ const Unmute = () => {
         }
         const data = await response.json();
         data["connected"] = "yes_request_ok";
-
-        if (data.ok && !data.voice_cloning_up) {
-          console.debug("Voice cloning not available, hiding upload button.");
-        }
         setHealthStatus(data);
       } catch {
         setHealthStatus({
@@ -140,7 +129,6 @@ const Unmute = () => {
   const onDownloadRecordingButtonPress = () => {
     try {
       downloadRecording(false);
-      analyticsOnDownloadRecording();
     } catch (e) {
       if (e instanceof Error) {
         setErrors((prev) => [...prev, makeErrorItem(e.message)]);
@@ -173,8 +161,6 @@ const Unmute = () => {
         },
         [opus.buffer],
       );
-    } else if (data.type === "unmute.additional_outputs") {
-      setDebugDict(data.args.debug_dict);
     } else if (data.type === "error") {
       if (data.error.type === "warning") {
         console.warn(`Warning from server: ${data.error.message}`, data);
@@ -295,7 +281,6 @@ const Unmute = () => {
           backendServerUrl={backendServerUrl}
           config={unmuteConfig}
           setConfig={setUnmuteConfig}
-          voiceCloningUp={healthStatus.voice_cloning_up || false}
         />
         <div className="w-full flex flex-col-reverse md:flex-row items-center justify-center px-3 gap-3 my-6">
           <SlantedButton
@@ -322,20 +307,6 @@ const Unmute = () => {
           )}
         </div>
       </div>
-      {/* Debug stuff, not counted into the screen height */}
-      {isDevMode && (
-        <div>
-          <div className="text-xs w-full overflow-auto">
-            <pre
-              className="whitespace-pre-wrap break-words"
-              dangerouslySetInnerHTML={{
-                __html: prettyPrintJson.toHtml(debugDict),
-              }}
-            ></pre>
-          </div>
-          <div>Subtitles: press S. Dev mode: press D.</div>
-        </div>
-      )}
       <canvas ref={recordingCanvasRef} className="hidden" />
     </div>
   );

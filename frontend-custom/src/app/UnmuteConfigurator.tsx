@@ -1,10 +1,8 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import VoiceAttribution from "./VoiceAttribution";
 import SquareButton from "./SquareButton";
 import Modal from "./Modal";
 import { ArrowUpRight } from "lucide-react";
-import VoiceUpload from "./VoiceUpload";
-// import VoiceUpload from "./VoiceUpload";
 
 export type LanguageCode = "en" | "fr" | "en/fr" | "fr/en";
 
@@ -127,15 +125,12 @@ const UnmuteConfigurator = ({
   config,
   backendServerUrl,
   setConfig,
-  voiceCloningUp,
 }: {
   config: UnmuteConfig;
   backendServerUrl: string;
   setConfig: (config: UnmuteConfig) => void;
-  voiceCloningUp: boolean;
 }) => {
   const [voices, setVoices] = useState<VoiceSample[] | null>(null);
-  const [customVoiceName, setCustomVoiceName] = useState<string | null>(null);
   const [customInstructions, setCustomInstructions] =
     useState<Instructions | null>(null);
 
@@ -164,19 +159,6 @@ const UnmuteConfigurator = ({
 
     fetchVoicesData();
   }, [backendServerUrl, config, setConfig, voices]);
-
-  const onCustomVoiceUpload = useCallback(
-    (name: string) => {
-      setCustomVoiceName(name);
-      setConfig({
-        voice: name,
-        instructions: customInstructions || DEFAULT_UNMUTE_CONFIG.instructions,
-        isCustomInstructions: !!customInstructions,
-        voiceName: "custom",
-      });
-    },
-    [customInstructions, setConfig]
-  );
 
   if (!voices) {
     return (
@@ -288,13 +270,6 @@ const UnmuteConfigurator = ({
                     {"/ " + getVoiceName(voice) + " /"}
                   </SquareButton>
                 ))}
-              {voiceCloningUp && (
-                <VoiceUpload
-                  backendServerUrl={backendServerUrl}
-                  onCustomVoiceUpload={onCustomVoiceUpload}
-                  isSelected={customVoiceName === config.voice}
-                />
-              )}
             </div>
           </div>
           <div className="inline-block md:hidden">

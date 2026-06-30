@@ -178,13 +178,6 @@ class TestTranscriptionDelta:
         assert event.start_time == 0.5
 
 
-class TestUnmuteAdditionalOutputs:
-    def test_additional_outputs(self):
-        event = ora.UnmuteAdditionalOutputs(args={"key": "value"})
-        assert event.type == "unmute.additional_outputs"
-        assert event.args == {"key": "value"}
-
-
 class TestUnmuteResponseTextDeltaReady:
     def test_text_delta_ready(self):
         event = ora.UnmuteResponseTextDeltaReady(delta="hello")

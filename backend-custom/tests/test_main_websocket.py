@@ -10,7 +10,7 @@ from unmute.main_websocket import (
     _check_server_status,
     _ws_to_http,
     app,
-    http_exception_handler,
+    general_exception_handler,
     voices,
 )
 
@@ -66,9 +66,7 @@ class TestHttpRoutes:
             from unmute.main_websocket import HealthStatus
 
             async def fake_health(_):
-                return HealthStatus(
-                    tts_up=True, stt_up=True, llm_up=True, voice_cloning_up=True
-                )
+                return HealthStatus(tts_up=True, stt_up=True, llm_up=True)
 
             mock_health.side_effect = fake_health
             response = client.get("/v1/health")
@@ -78,31 +76,12 @@ class TestHttpRoutes:
             assert data["tts_up"] is True
 
     @pytest.mark.asyncio
-    async def test_health_partial(self, client):
-        with patch("unmute.main_websocket._get_health") as mock_health:
-            from unmute.main_websocket import HealthStatus
-
-            async def fake_health(_):
-                return HealthStatus(
-                    tts_up=True, stt_up=True, llm_up=True, voice_cloning_up=False
-                )
-
-            mock_health.side_effect = fake_health
-            response = client.get("/v1/health")
-            data = response.json()
-            # Voice cloning is not required for health
-            assert data["ok"] is True
-            assert data["voice_cloning_up"] is False
-
-    @pytest.mark.asyncio
     async def test_health_unhealthy(self, client):
         with patch("unmute.main_websocket._get_health") as mock_health:
             from unmute.main_websocket import HealthStatus
 
             async def fake_health(_):
-                return HealthStatus(
-                    tts_up=False, stt_up=True, llm_up=True, voice_cloning_up=True
-                )
+                return HealthStatus(tts_up=False, stt_up=True, llm_up=True)
 
             mock_health.side_effect = fake_health
             response = client.get("/v1/health")
@@ -121,57 +100,21 @@ class TestHttpRoutes:
         for voice in voices_data:
             assert "name" in voice or "source" in voice
 
-    def test_voice_donation_get(self, client):
-        response = client.get("/v1/voice-donation")
-        assert response.status_code == 200
-        data = response.json()
-        assert "id" in data
-        assert "text" in data
 
+@pytest.mark.asyncio
+class TestExceptionHandlers:
+    async def test_general_exception_handler(self):
+        from starlette.requests import Request
 
-class TestVoiceUpload:
-    @pytest.fixture
-    def client(self):
-        return TestClient(app)
-
-    def test_voice_upload_too_large(self, client):
-        """Test that large files are rejected."""
-        large_data = b"\x00" * (5 * 1024 * 1024)  # 5MB
-        response = client.post(
-            "/v1/voices",
-            files={"file": ("test.wav", large_data, "audio/wav")},
-        )
-        assert response.status_code == 413
-
-    def test_voice_upload_success(self, client):
-        with patch("unmute.main_websocket.clone_voice") as mock_clone:
-            mock_clone.return_value = "custom:test123"
-            response = client.post(
-                "/v1/voices",
-                files={"file": ("test.wav", b"fake-audio", "audio/wav")},
-            )
-            assert response.status_code == 200
-            assert response.json()["name"] == "custom:test123"
-
-
-class TestVoiceDonationEndpoint:
-    @pytest.fixture
-    def client(self):
-        return TestClient(app)
-
-    def test_invalid_json(self, client):
-        response = client.post(
-            "/v1/voice-donation",
-            files={"file": ("test.wav", b"fake-audio", "audio/wav")},
-            data={"metadata": "not json"},
-        )
-        assert response.status_code == 400
-
-    def test_invalid_metadata(self, client):
-        response = client.post(
-            "/v1/voice-donation",
-            files={"file": ("test.wav", b"fake-audio", "audio/wav")},
-            data={"metadata": json.dumps({"email": "test@example.com"})},
-        )
-        # Should fail because required fields are missing
-        assert response.status_code == 400
+        scope = {
+            "type": "http",
+            "method": "GET",
+            "path": "/",
+            "headers": [],
+        }
+        request = Request(scope)
+        exc = RuntimeError("Something broke")
+        response = await general_exception_handler(request, exc)
+        assert response.status_code == 500
+        body = json.loads(response.body)
+        assert body["detail"] == "Internal server error"

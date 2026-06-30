@@ -32,13 +32,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={satoshi.className}>
-      <head>
-        {/* Needed for debugging JSON styling */}
-        <link
-          rel="stylesheet"
-          href="https://cdn.jsdelivr.net/npm/pretty-print-json@3.0/dist/css/pretty-print-json.dark-mode.css"
-        />
-      </head>
       <body>
         {children}
         <ConsentModal />

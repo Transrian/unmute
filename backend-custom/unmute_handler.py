@@ -8,14 +8,11 @@ from typing import Any, Literal, cast
 import numpy as np
 import websockets
 from fastrtc import (
-    AdditionalOutputs,
     AsyncStreamHandler,
     CloseStream,
     audio_to_float32,
     wait_for_item,
 )
-from pydantic import BaseModel
-
 import unmute.openai_realtime_api_events as ora
 from unmute import metrics as mt
 from unmute.audio_input_override import AudioInputOverride
@@ -66,15 +63,7 @@ UNINTERRUPTIBLE_BY_VAD_TIME_SEC = 3
 
 logger = getLogger(__name__)
 
-HandlerOutput = (
-    tuple[int, np.ndarray] | AdditionalOutputs | ora.ServerEvent | CloseStream
-)
-
-
-class GradioUpdate(BaseModel):
-    chat_history: list[dict[str, str]]
-    debug_dict: dict[str, Any]
-    debug_plot_data: list[dict]
+HandlerOutput = tuple[int, np.ndarray] | ora.ServerEvent | CloseStream
 
 
 class UnmuteHandler(AsyncStreamHandler):
@@ -103,14 +92,6 @@ class UnmuteHandler(AsyncStreamHandler):
 
         self.turn_transition_lock = asyncio.Lock()
 
-        self.debug_dict: dict[str, Any] = {
-            "timing": {},
-            "connection": {},
-            "chatbot": {},
-        }
-        self.debug_plot_data: list[dict] = []
-        self.last_additional_output_update = self.audio_received_sec()
-
         if AUDIO_INPUT_OVERRIDE is not None:
             self.audio_input_override = AudioInputOverride(AUDIO_INPUT_OVERRIDE)
         else:
@@ -135,32 +116,6 @@ class UnmuteHandler(AsyncStreamHandler):
         except KeyError:
             return None
         return cast(Quest[TextToSpeech], quest).get_nowait()
-
-    def get_gradio_update(self):
-        self.debug_dict["conversation_state"] = self.chatbot.conversation_state()
-        self.debug_dict["connection"]["stt"] = self.stt.state() if self.stt else "none"
-        self.debug_dict["connection"]["tts"] = self.tts.state() if self.tts else "none"
-        self.debug_dict["tts_voice"] = self.tts.voice if self.tts else "none"
-        self.debug_dict["stt_pause_prediction"] = (
-            self.stt.pause_prediction.value if self.stt else -1
-        )
-
-        # This gets verbose
-        # cutoff_time = self.audio_received_sec() - DEBUG_PLOT_HISTORY_SEC
-        # self.debug_plot_data = [x for x in self.debug_plot_data if x["t"] > cutoff_time]
-
-        return AdditionalOutputs(
-            GradioUpdate(
-                chat_history=[
-                    # Not trying to hide the system prompt, just making it less verbose
-                    m
-                    for m in self.chatbot.chat_history
-                    if m["role"] != "system"
-                ],
-                debug_dict=self.debug_dict,
-                debug_plot_data=[],
-            )
-        )
 
     async def add_chat_message_delta(
         self,
@@ -232,7 +187,6 @@ class UnmuteHandler(AsyncStreamHandler):
 
                 if time_to_first_token is None:
                     time_to_first_token = llm_stopwatch.time()
-                    self.debug_dict["timing"]["to_first_token"] = time_to_first_token
                     mt.VLLM_TTFT.observe(time_to_first_token)
                     logger.info("Sending first word to TTS: %s", delta)
 
@@ -288,19 +242,6 @@ class UnmuteHandler(AsyncStreamHandler):
 
         self.n_samples_received += array.shape[0]
 
-        # If this doesn't update, it means the receive loop isn't running because
-        # the process is busy with something else, which is bad.
-        self.debug_dict["last_receive_time"] = self.audio_received_sec()
-        float_audio = audio_to_float32(array)
-
-        self.debug_plot_data.append(
-            {
-                "t": self.audio_received_sec(),
-                "amplitude": float(np.sqrt((float_audio**2).mean())),
-                "pause_prediction": stt.pause_prediction.value,
-            }
-        )
-
         if self.chatbot.conversation_state() == "bot_speaking":
             # Periodically update this not to trigger the "long silence" accidentally.
             self.waiting_for_user_start_time = self.audio_received_sec()
@@ -329,9 +270,6 @@ class UnmuteHandler(AsyncStreamHandler):
 
         if self.audio_input_override is not None:
             frame = (frame[0], self.audio_input_override.override(frame[1]))
-
-        if self.chatbot.conversation_state() == "user_speaking":
-            self.debug_dict["timing"] = {}
 
         await stt.send_audio(array)
         if self.stt_end_of_flush_time is None:
@@ -382,10 +320,8 @@ class UnmuteHandler(AsyncStreamHandler):
         time_since_last_message = (
             stt.sent_samples / self.input_sample_rate
         ) - self.stt_last_message_time
-        self.debug_dict["time_since_last_message"] = time_since_last_message
 
         if stt.pause_prediction.value > 0.6:
-            self.debug_dict["timing"]["pause_detection"] = time_since_last_message
             return True
         else:
             return False
@@ -395,16 +331,7 @@ class UnmuteHandler(AsyncStreamHandler):
     ) -> HandlerOutput | None:
         output_queue_item = await wait_for_item(self.output_queue)
 
-        if output_queue_item is not None:
-            return output_queue_item
-        else:
-            if self.last_additional_output_update < self.audio_received_sec() - 1:
-                # If we have nothing to emit, at least update the debug dict.
-                # Don't update too often for performance reasons
-                self.last_additional_output_update = self.audio_received_sec()
-                return self.get_gradio_update()
-            else:
-                return None
+        return output_queue_item if output_queue_item is not None else None
 
     def copy(self):
         return UnmuteHandler()
@@ -513,30 +440,10 @@ class UnmuteHandler(AsyncStreamHandler):
             audio_started = None
 
             async for message in tts:
-                if audio_started is not None:
-                    time_since_start = self.audio_received_sec() - audio_started
-                    time_received = tts.received_samples / self.input_sample_rate
-                    time_received_yielded = (
-                        tts.received_samples_yielded / self.input_sample_rate
-                    )
-                    assert self.input_sample_rate == SAMPLE_RATE
-                    self.debug_dict["tts_throughput"] = {
-                        "time_received": round(time_received, 2),
-                        "time_received_yielded": round(time_received_yielded, 2),
-                        "time_since_start": round(time_since_start, 2),
-                        "ratio": round(
-                            time_received_yielded / (time_since_start + 0.01), 2
-                        ),
-                    }
-
                 if len(self.chatbot.chat_history) > generating_message_i:
                     break
 
                 if isinstance(message, TTSAudioMessage):
-                    t = self.tts_output_stopwatch.stop()
-                    if t is not None:
-                        self.debug_dict["timing"]["tts_audio"] = t
-
                     audio = np.array(message.pcm, dtype=np.float32)
                     assert self.output_sample_rate == SAMPLE_RATE
 
@@ -568,9 +475,6 @@ class UnmuteHandler(AsyncStreamHandler):
             logger.warning("No message to send in TTS shutdown.")
             message = ""
 
-        # It's convenient to have the whole chat history available in the client
-        # after the response is done, so send the "gradio update"
-        await self.output_queue.put(self.get_gradio_update())
         await self.output_queue.put(ora.ResponseAudioDone())
 
         # Signal that the turn is over by adding an empty message.

@@ -1,10 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import SquareButton from "./SquareButton";
-import { GoogleAnalytics } from "@next/third-parties/google";
 
-// Changing this key will reset the consent state for all users
-export const COOKIE_CONSENT_STORAGE_KEY = "cookieConsentV2";
 export const RECORDING_CONSENT_STORAGE_KEY = "recordingConsent";
 
 export function useConsentState(storageKey: string) {
@@ -47,12 +44,6 @@ export function useConsentState(storageKey: string) {
 }
 
 export default function ConsentModal() {
-  const [showDetails, setShowDetails] = useState(false);
-  const {
-    consentGiven: cookieConsentGiven,
-    consentLoaded: cookieConsentLoaded,
-    setConsent: setCookieConsent,
-  } = useConsentState(COOKIE_CONSENT_STORAGE_KEY);
   const {
     consentGiven: recordingConsentGiven,
     consentLoaded: recordingConsentLoaded,
@@ -67,27 +58,12 @@ export default function ConsentModal() {
     }
   }, [recordingConsentGiven, recordingConsentLoaded]);
 
-  if (!cookieConsentLoaded) {
+  if (!recordingConsentLoaded) {
     return null; // Wait until consent state is loaded
   }
 
-  if (cookieConsentGiven === true) {
-    // To debug Google Analytics, add debugMode={true} here and go to the Tag Assistant:
-    // https://tagassistant.google.com/
-    if (
-      typeof window !== "undefined" &&
-      window.location.hostname === "unmute.sh" // only load on production site
-    ) {
-      // If you want to use Google Analytics for your deployment, please change the GA ID and accepted hostname here.
-      // Otherwise we get your traffic mixed with Unmute's traffic
-      return <GoogleAnalytics gaId="G-MLN0BSWF97" />;
-    } else {
-      console.debug("Cookie consent given, but not loading GA since not prod");
-      return null;
-    }
-  }
-
-  if (cookieConsentGiven === false) {
+  if (recordingConsentGiven !== null) {
+    // User has already made a choice
     return null;
   }
 
@@ -97,24 +73,6 @@ export default function ConsentModal() {
       <div className="max-w-7xl mx-auto p-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex-1 text-sm text-textgray">
-            <p className="text-sm text-textgray mb-2">
-              Can we use cookies according to our{" "}
-              <a
-                href="https://kyutai.org/privacy-policy"
-                className="underline"
-              >
-                Privacy Policy
-              </a>{" "}
-              to improve your experience and analyze site usage?{" "}
-              {!showDetails && (
-                <button
-                  onClick={() => setShowDetails(true)}
-                  className="text-green underline"
-                >
-                  Learn more
-                </button>
-              )}
-            </p>
             <div className="flex items-center mt-2">
               <input
                 id="recording-consent-checkbox"
@@ -128,28 +86,12 @@ export default function ConsentModal() {
                 voice will not be stored) to help our non-profit research
               </label>
             </div>
-            {showDetails && (
-              <div className="mt-3 p-3 bg-darkgray text-sm text-textgray">
-                <p className="mb-2">
-                  <strong>Analytics Cookies:</strong> We use Google Analytics to
-                  understand how visitors interact with our website. This helps
-                  us improve our content and user experience.
-                </p>
-                <button
-                  onClick={() => setShowDetails(false)}
-                  className="text-green underline"
-                >
-                  Learn less
-                </button>
-              </div>
-            )}
           </div>
 
           <div className="flex flex-row gap-2 w-full sm:w-auto justify-center">
             <SquareButton
               kind="primary"
               onClick={() => {
-                setCookieConsent(true);
                 setRecordingConsent(recordingChecked);
               }}
             >
@@ -158,8 +100,7 @@ export default function ConsentModal() {
             <SquareButton
               kind="secondary"
               onClick={() => {
-                setCookieConsent(false);
-                setRecordingConsent(false); // Cookies declined -> recording also declined
+                setRecordingConsent(false);
               }}
             >
               Decline

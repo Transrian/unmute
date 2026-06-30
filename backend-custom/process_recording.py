@@ -276,9 +276,7 @@ def process_events(recorder_events: list[RecorderEvent]) -> list[StepEvents]:
             tts_text_ready.clear()
             other_events[samples_since_start].append(ora_event)
         else:
-            ignored_event_types = [ora.UnmuteAdditionalOutputs]
-            if not isinstance(ora_event, tuple(ignored_event_types)):
-                other_events[samples_since_start].append(ora_event)
+            other_events[samples_since_start].append(ora_event)
 
     # Merge other_events into step_events
     for samples_since_start, step_event in step_events.items():

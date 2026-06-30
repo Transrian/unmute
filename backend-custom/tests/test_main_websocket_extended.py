@@ -1,12 +1,10 @@
 """Extended tests for main_websocket.py to increase coverage."""
 
-import asyncio
 import json
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
-from fastapi.websockets import WebSocketState
 
 from unmute.main_websocket import (
     _check_server_status,
@@ -15,7 +13,6 @@ from unmute.main_websocket import (
     app,
     EmitDebugLogger,
     general_exception_handler,
-    http_exception_handler,
 )
 
 
@@ -114,26 +111,8 @@ class TestEmitDebugLogger:
         assert logger.last_emitted_n == 1  # reset for new type
 
 
+@pytest.mark.asyncio
 class TestExceptionHandlers:
-    @pytest.mark.asyncio
-    async def test_http_exception_handler(self):
-        from starlette.requests import Request
-        from fastapi import HTTPException
-
-        scope = {
-            "type": "http",
-            "method": "GET",
-            "path": "/",
-            "headers": [],
-        }
-        request = Request(scope)
-        exc = HTTPException(status_code=404, detail="Not found")
-        response = await http_exception_handler(request, exc)
-        assert response.status_code == 404
-        body = json.loads(response.body)
-        assert body["detail"] == "Not found"
-
-    @pytest.mark.asyncio
     async def test_general_exception_handler(self):
         from starlette.requests import Request
 
@@ -162,111 +141,32 @@ class TestCheckServerStatus:
                 "http://localhost:8080", headers={"Authorization": "Bearer token"}
             )
             assert result is True
-            mock_requests.get.assert_called_once()
-
-
-class TestVoiceUploadMiddleware:
-    @pytest.fixture
-    def client(self):
-        return TestClient(app)
-
-    def test_voice_upload_no_content_length(self, client):
-        """Test that requests without Content-Length header get 411."""
-        # This is hard to test with TestClient, so we test the middleware logic directly
-        from unmute.main_websocket import LimitUploadSizeForPath
-
-        mock_app = MagicMock()
-
-        async def mock_call_next(request):
-            from starlette.responses import Response
-            return Response(content="OK")
-
-        middleware = LimitUploadSizeForPath(mock_app, max_upload_size=1024, path="/v1/voices")
-
-        scope = {
-            "type": "http",
-            "method": "POST",
-            "path": "/v1/voices",
-            "headers": [],  # No content-length
-        }
-        request = MagicMock()
-        request.method = "POST"
-        request.url.path = "/v1/voices"
-        request.headers = {}  # No content-length
-
-        response = asyncio.get_event_loop().run_until_complete(
-            middleware.dispatch(request, mock_call_next)
-        )
-        assert response.status_code == 411
-
-    def test_voice_upload_within_size(self, client):
-        """Test that small files are allowed."""
-        with patch("unmute.main_websocket.clone_voice") as mock_clone:
-            mock_clone.return_value = "custom:test123"
-            response = client.post(
-                "/v1/voices",
-                files={"file": ("test.wav", b"small-audio", "audio/wav")},
-            )
-            assert response.status_code == 200
 
 
 class TestHealthStatus:
     def test_ok_true_when_all_services_up(self):
         from unmute.main_websocket import HealthStatus
 
-        health = HealthStatus(
-            tts_up=True, stt_up=True, llm_up=True, voice_cloning_up=True
-        )
+        health = HealthStatus(tts_up=True, stt_up=True, llm_up=True)
         assert health.ok is True
 
     def test_ok_false_when_tts_down(self):
         from unmute.main_websocket import HealthStatus
 
-        health = HealthStatus(
-            tts_up=False, stt_up=True, llm_up=True, voice_cloning_up=True
-        )
+        health = HealthStatus(tts_up=False, stt_up=True, llm_up=True)
         assert health.ok is False
 
     def test_ok_false_when_stt_down(self):
         from unmute.main_websocket import HealthStatus
 
-        health = HealthStatus(
-            tts_up=True, stt_up=False, llm_up=True, voice_cloning_up=True
-        )
+        health = HealthStatus(tts_up=True, stt_up=False, llm_up=True)
         assert health.ok is False
 
     def test_ok_false_when_llm_down(self):
         from unmute.main_websocket import HealthStatus
 
-        health = HealthStatus(
-            tts_up=True, stt_up=True, llm_up=False, voice_cloning_up=True
-        )
+        health = HealthStatus(tts_up=True, stt_up=True, llm_up=False)
         assert health.ok is False
-
-    def test_ok_true_when_voice_cloning_down(self):
-        """Voice cloning is not required for health."""
-        from unmute.main_websocket import HealthStatus
-
-        health = HealthStatus(
-            tts_up=True, stt_up=True, llm_up=True, voice_cloning_up=False
-        )
-        assert health.ok is True
-
-
-class TestVoiceDonationEndpointExtended:
-    @pytest.fixture
-    def client(self):
-        return TestClient(app)
-
-    def test_voice_donation_with_file_too_large(self, client):
-        """Test that large donation files are rejected."""
-        large_data = b"\x00" * (5 * 1024 * 1024)  # 5MB
-        response = client.post(
-            "/v1/voice-donation",
-            files={"file": ("test.wav", large_data, "audio/wav")},
-            data={"metadata": json.dumps({})},
-        )
-        assert response.status_code == 413
 
 
 class TestTtsStreamingQuery:

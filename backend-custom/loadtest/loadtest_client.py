@@ -247,8 +247,6 @@ async def receive_loop(
                     break
             elif isinstance(message, ora.ConversationItemInputAudioTranscriptionDelta):
                 user_stopwatch.time_phase_if_not_started("text_start")
-            elif isinstance(message, ora.UnmuteAdditionalOutputs):
-                chat_history = message.args["chat_history"]
             elif isinstance(
                 message,
                 (

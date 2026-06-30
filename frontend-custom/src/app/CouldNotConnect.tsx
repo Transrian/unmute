@@ -7,7 +7,6 @@ export type HealthStatus = {
   tts_up?: boolean;
   stt_up?: boolean;
   llm_up?: boolean;
-  voice_cloning_up?: boolean;
 };
 
 const renderServiceStatus = (
@@ -76,11 +75,6 @@ const CouldNotConnect = ({ healthStatus }: { healthStatus: HealthStatus }) => {
         {renderServiceStatus("STT", healthStatus.stt_up)}
         {renderServiceStatus("LLM", healthStatus.llm_up)}
         {renderServiceStatus("TTS", healthStatus.tts_up)}
-        {renderServiceStatus(
-          "Voice cloning",
-          healthStatus.voice_cloning_up,
-          false
-        )}
       </div>
     </div>
   );

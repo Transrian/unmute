@@ -153,10 +153,6 @@ class ConversationItemInputAudioTranscriptionDelta(
     start_time: float  # Unmute extension
 
 
-class UnmuteAdditionalOutputs(BaseEvent[Literal["unmute.additional_outputs"]]):
-    args: Any
-
-
 class UnmuteResponseTextDeltaReady(
     BaseEvent[Literal["unmute.response.text.delta.ready"]]
 ):
@@ -185,7 +181,6 @@ ServerEvent = Union[
     ConversationItemInputAudioTranscriptionDelta,
     InputAudioBufferSpeechStarted,
     InputAudioBufferSpeechStopped,
-    UnmuteAdditionalOutputs,
     UnmuteResponseTextDeltaReady,
     UnmuteResponseAudioDeltaReady,
     UnmuteInterruptedByVAD,
