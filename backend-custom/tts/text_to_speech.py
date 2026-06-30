@@ -17,7 +17,6 @@ from unmute.kyutai_constants import (
     TEXT_TO_SPEECH_PATH,
     TTS_SERVER,
 )
-from unmute.recorder import Recorder
 from unmute.service_discovery import ServiceWithStartup
 from unmute.timer import Stopwatch
 from unmute.tts.realtime_queue import RealtimeQueue
@@ -132,14 +131,10 @@ class TextToSpeech(ServiceWithStartup):
     def __init__(
         self,
         tts_instance: str = TTS_SERVER,
-        # For TTS, we do internal queuing, so we pass in the recorder to be able to
-        # record the true time of the messages.
-        recorder: Recorder | None = None,
         get_time: Callable[[], float] | None = None,
         voice: str | None = None,
     ):
         self.tts_instance = tts_instance
-        self.recorder = recorder
         self.websocket: websockets.ClientConnection | None = None
 
         self.time_since_first_text_sent = Stopwatch(autostart=False)
@@ -280,14 +275,6 @@ class TextToSpeech(ServiceWithStartup):
                         message, self.received_samples / SAMPLE_RATE - AUDIO_BUFFER_SEC
                     )
                     self.received_samples += len(message.pcm)
-
-                    if self.recorder is not None:
-                        await self.recorder.add_event(
-                            "server",
-                            ora.UnmuteResponseAudioDeltaReady(
-                                number_of_samples=len(message.pcm)
-                            ),
-                        )
 
                 elif isinstance(message, TTSTextMessage):
                     mt.TTS_RECV_WORDS.inc()

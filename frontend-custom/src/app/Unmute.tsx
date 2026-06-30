@@ -17,10 +17,8 @@ import Subtitles from "./Subtitles";
 import { ChatMessage, compressChatHistory } from "./chatHistory";
 import useWakeLock from "./useWakeLock";
 import ErrorMessages, { ErrorItem, makeErrorItem } from "./ErrorMessages";
-import { useRecordingCanvas } from "./useRecordingCanvas";
 import clsx from "clsx";
 import { useBackendServerUrl } from "./useBackendServerUrl";
-import { RECORDING_CONSENT_STORAGE_KEY } from "./ConsentModal";
 
 const Unmute = () => {
   const { showSubtitles } = useKeyboardShortcuts();
@@ -100,17 +98,6 @@ const Unmute = () => {
 
   const { setupAudio, shutdownAudio, audioProcessor } =
     useAudioProcessor(onOpusRecorded);
-  const {
-    canvasRef: recordingCanvasRef,
-    downloadRecording,
-    recordingAvailable,
-  } = useRecordingCanvas({
-    size: 1080,
-    shouldRecord: shouldConnect,
-    audioProcessor: audioProcessor.current,
-    chatHistory: rawChatHistory,
-  });
-
   const onConnectButtonPress = async () => {
     // If we're not connected yet
     if (!shouldConnect) {
@@ -123,16 +110,6 @@ const Unmute = () => {
     } else {
       setShouldConnect(false);
       shutdownAudio();
-    }
-  };
-
-  const onDownloadRecordingButtonPress = () => {
-    try {
-      downloadRecording(false);
-    } catch (e) {
-      if (e instanceof Error) {
-        setErrors((prev) => [...prev, makeErrorItem(e.message)]);
-      }
     }
   };
 
@@ -211,9 +188,6 @@ const Unmute = () => {
   useEffect(() => {
     if (readyState !== ReadyState.OPEN) return;
 
-    const recordingConsent =
-      localStorage.getItem(RECORDING_CONSENT_STORAGE_KEY) === "true";
-
     setRawChatHistory([]);
     sendMessage(
       JSON.stringify({
@@ -221,7 +195,6 @@ const Unmute = () => {
         session: {
           instructions: unmuteConfig.instructions,
           voice: unmuteConfig.voice,
-          allow_recording: recordingConsent,
         },
       }),
     );
@@ -284,13 +257,6 @@ const Unmute = () => {
         />
         <div className="w-full flex flex-col-reverse md:flex-row items-center justify-center px-3 gap-3 my-6">
           <SlantedButton
-            onClick={onDownloadRecordingButtonPress}
-            kind={recordingAvailable ? "secondary" : "disabled"}
-            extraClasses="w-full max-w-96"
-          >
-            {"download recording"}
-          </SlantedButton>
-          <SlantedButton
             onClick={onConnectButtonPress}
             kind={shouldConnect ? "secondary" : "primary"}
             extraClasses="w-full max-w-96"
@@ -307,7 +273,6 @@ const Unmute = () => {
           )}
         </div>
       </div>
-      <canvas ref={recordingCanvasRef} className="hidden" />
     </div>
   );
 };

@@ -15,16 +15,14 @@ def _patch_handler_deps():
     return (
         patch("unmute.unmute_handler.Chatbot"),
         patch("unmute.unmute_handler.get_openai_client"),
-        patch("unmute.unmute_handler.Recorder", return_value=None),
-        patch("unmute.unmute_handler.RECORDINGS_DIR", None),
     )
 
 
 class TestUnmuteHandlerInit:
     @pytest.mark.asyncio
     async def test_init(self):
-        p1, p2, p3, p4 = _patch_handler_deps()
-        with p1, p2, p3, p4:
+        p1, p2 = _patch_handler_deps()
+        with p1, p2:
             from unmute.unmute_handler import UnmuteHandler
 
             handler = UnmuteHandler()
@@ -32,8 +30,8 @@ class TestUnmuteHandlerInit:
 
     @pytest.mark.asyncio
     async def test_audio_received_sec(self):
-        p1, p2, p3, p4 = _patch_handler_deps()
-        with p1, p2, p3, p4:
+        p1, p2 = _patch_handler_deps()
+        with p1, p2:
             from unmute.unmute_handler import UnmuteHandler
 
             handler = UnmuteHandler()
@@ -45,8 +43,8 @@ class TestUnmuteHandlerDeterminePause:
     @pytest.mark.asyncio
     async def test_no_stt_returns_false(self):
         """When stt is None, determine_pause should return False."""
-        p1, p2, p3, p4 = _patch_handler_deps()
-        with p1, p2, p3, p4:
+        p1, p2 = _patch_handler_deps()
+        with p1, p2:
             from unmute.unmute_handler import UnmuteHandler
 
             handler = UnmuteHandler()
@@ -58,8 +56,8 @@ class TestUnmuteHandlerDeterminePause:
     @pytest.mark.asyncio
     async def test_not_user_speaking_returns_false(self):
         """When conversation state is not user_speaking, pause should be False."""
-        p1, p2, p3, p4 = _patch_handler_deps()
-        with p1, p2, p3, p4:
+        p1, p2 = _patch_handler_deps()
+        with p1, p2:
             from unmute.unmute_handler import UnmuteHandler
             from unmute.stt.exponential_moving_average import ExponentialMovingAverage
 
@@ -81,8 +79,8 @@ class TestUnmuteHandlerDeterminePause:
     @pytest.mark.asyncio
     async def test_pause_detected_high_prediction(self):
         """When pause prediction > 0.6 and user is speaking, pause should be True."""
-        p1, p2, p3, p4 = _patch_handler_deps()
-        with p1, p2, p3, p4:
+        p1, p2 = _patch_handler_deps()
+        with p1, p2:
             from unmute.unmute_handler import UnmuteHandler
             from unmute.stt.exponential_moving_average import ExponentialMovingAverage
 
@@ -104,8 +102,8 @@ class TestUnmuteHandlerDeterminePause:
     @pytest.mark.asyncio
     async def test_no_pause_low_prediction(self):
         """When pause prediction < 0.6, pause should be False."""
-        p1, p2, p3, p4 = _patch_handler_deps()
-        with p1, p2, p3, p4:
+        p1, p2 = _patch_handler_deps()
+        with p1, p2:
             from unmute.unmute_handler import UnmuteHandler
             from unmute.stt.exponential_moving_average import ExponentialMovingAverage
 
@@ -128,8 +126,8 @@ class TestUnmuteHandlerDeterminePause:
 class TestUnmuteHandlerInterruptBot:
     @pytest.mark.asyncio
     async def test_interrupt_bot_wrong_state(self):
-        p1, p2, p3, p4 = _patch_handler_deps()
-        with p1, p2, p3, p4:
+        p1, p2 = _patch_handler_deps()
+        with p1, p2:
             from unmute.unmute_handler import UnmuteHandler
 
             handler = UnmuteHandler()
@@ -144,8 +142,8 @@ class TestUnmuteHandlerInterruptBot:
 class TestUnmuteHandlerDetectLongSilence:
     @pytest.mark.asyncio
     async def test_no_silence_yet(self):
-        p1, p2, p3, p4 = _patch_handler_deps()
-        with p1, p2, p3, p4:
+        p1, p2 = _patch_handler_deps()
+        with p1, p2:
             from unmute.unmute_handler import UnmuteHandler
 
             handler = UnmuteHandler()
@@ -157,8 +155,8 @@ class TestUnmuteHandlerDetectLongSilence:
 
     @pytest.mark.asyncio
     async def test_silence_detected(self):
-        p1, p2, p3, p4 = _patch_handler_deps()
-        with p1, p2, p3, p4:
+        p1, p2 = _patch_handler_deps()
+        with p1, p2:
             from unmute.unmute_handler import UnmuteHandler
 
             handler = UnmuteHandler()
@@ -181,8 +179,8 @@ class TestUnmuteHandlerDetectLongSilence:
 class TestUnmuteHandlerCheckForBotGoodbye:
     @pytest.mark.asyncio
     async def test_goodbye_detected(self):
-        p1, p2, p3, p4 = _patch_handler_deps()
-        with p1, p2, p3, p4:
+        p1, p2 = _patch_handler_deps()
+        with p1, p2:
             from unmute.unmute_handler import UnmuteHandler
 
             handler = UnmuteHandler()
@@ -202,8 +200,8 @@ class TestUnmuteHandlerCheckForBotGoodbye:
 
     @pytest.mark.asyncio
     async def test_no_goodbye(self):
-        p1, p2, p3, p4 = _patch_handler_deps()
-        with p1, p2, p3, p4:
+        p1, p2 = _patch_handler_deps()
+        with p1, p2:
             from unmute.unmute_handler import UnmuteHandler
 
             handler = UnmuteHandler()
@@ -224,8 +222,8 @@ class TestUnmuteHandlerCheckForBotGoodbye:
 class TestUnmuteHandlerUpdateSession:
     @pytest.mark.asyncio
     async def test_update_instructions(self):
-        p1, p2, p3, p4 = _patch_handler_deps()
-        with p1, p2, p3, p4:
+        p1, p2 = _patch_handler_deps()
+        with p1, p2:
             from unmute.unmute_handler import UnmuteHandler
             import unmute.openai_realtime_api_events as ora
             from unmute.llm.system_prompt import ConstantInstructions
@@ -237,7 +235,6 @@ class TestUnmuteHandlerUpdateSession:
             session = ora.SessionConfig(
                 instructions=ConstantInstructions(),
                 voice="alloy",
-                allow_recording=True,
             )
             await handler.update_session(session)
 
@@ -246,8 +243,8 @@ class TestUnmuteHandlerUpdateSession:
 
     @pytest.mark.asyncio
     async def test_update_voice(self):
-        p1, p2, p3, p4 = _patch_handler_deps()
-        with p1, p2, p3, p4:
+        p1, p2 = _patch_handler_deps()
+        with p1, p2:
             from unmute.unmute_handler import UnmuteHandler
             import unmute.openai_realtime_api_events as ora
 
@@ -257,7 +254,6 @@ class TestUnmuteHandlerUpdateSession:
             session = ora.SessionConfig(
                 instructions=None,
                 voice="gertrude",
-                allow_recording=True,
             )
             await handler.update_session(session)
 

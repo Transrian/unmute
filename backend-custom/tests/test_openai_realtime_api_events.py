@@ -52,10 +52,8 @@ class TestSessionConfig:
         config = ora.SessionConfig(
             instructions=None,
             voice="alloy",
-            allow_recording=True,
         )
         assert config.voice == "alloy"
-        assert config.allow_recording is True
 
     def test_session_config_with_instructions(self):
         from unmute.llm.system_prompt import ConstantInstructions
@@ -63,10 +61,8 @@ class TestSessionConfig:
         config = ora.SessionConfig(
             instructions=ConstantInstructions(),
             voice=None,
-            allow_recording=False,
         )
         assert config.instructions is not None
-        assert config.allow_recording is False
 
 
 class TestSessionUpdate:
@@ -75,7 +71,6 @@ class TestSessionUpdate:
             session=ora.SessionConfig(
                 instructions=None,
                 voice="alloy",
-                allow_recording=True,
             )
         )
         assert event.type == "session.update"
@@ -88,7 +83,6 @@ class TestSessionUpdated:
             session=ora.SessionConfig(
                 instructions=None,
                 voice="alloy",
-                allow_recording=True,
             )
         )
         assert event.type == "session.updated"
@@ -184,26 +178,10 @@ class TestUnmuteResponseTextDeltaReady:
         assert event.type == "unmute.response.text.delta.ready"
 
 
-class TestUnmuteResponseAudioDeltaReady:
-    def test_audio_delta_ready(self):
-        event = ora.UnmuteResponseAudioDeltaReady(number_of_samples=960)
-        assert event.type == "unmute.response.audio.delta.ready"
-        assert event.number_of_samples == 960
-
-
 class TestUnmuteInterruptedByVAD:
     def test_interrupted_by_vad(self):
         event = ora.UnmuteInterruptedByVAD()
         assert event.type == "unmute.interrupted_by_vad"
-
-
-class TestUnmuteAnonymizedInput:
-    def test_anonymized_input(self):
-        event = ora.UnmuteInputAudioBufferAppendAnonymized(
-            number_of_samples=960
-        )
-        assert event.type == "unmute.input_audio_buffer.append_anonymized"
-        assert event.number_of_samples == 960
 
 
 class TestEventModelDump:

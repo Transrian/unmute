@@ -13,8 +13,6 @@ def _patch_handler_deps():
     return (
         patch("unmute.unmute_handler.Chatbot"),
         patch("unmute.unmute_handler.get_openai_client"),
-        patch("unmute.unmute_handler.Recorder", return_value=None),
-        patch("unmute.unmute_handler.RECORDINGS_DIR", None),
     )
 
 
@@ -26,8 +24,8 @@ def _patch_handler_deps():
 class TestUnmuteHandlerLifecycle:
     @pytest.mark.asyncio
     async def test_aenter(self):
-        p1, p2, p3, p4 = _patch_handler_deps()
-        with p1, p2, p3, p4:
+        p1, p2 = _patch_handler_deps()
+        with p1, p2:
             from unmute.unmute_handler import UnmuteHandler
 
             handler = UnmuteHandler()
@@ -35,8 +33,8 @@ class TestUnmuteHandlerLifecycle:
 
     @pytest.mark.asyncio
     async def test_aexit_after_aenter(self):
-        p1, p2, p3, p4 = _patch_handler_deps()
-        with p1, p2, p3, p4:
+        p1, p2 = _patch_handler_deps()
+        with p1, p2:
             from unmute.unmute_handler import UnmuteHandler
 
             handler = UnmuteHandler()
@@ -45,8 +43,8 @@ class TestUnmuteHandlerLifecycle:
 
     @pytest.mark.asyncio
     async def test_start_up_calls_start_up_stt(self):
-        p1, p2, p3, p4 = _patch_handler_deps()
-        with p1, p2, p3, p4:
+        p1, p2 = _patch_handler_deps()
+        with p1, p2:
             from unmute.unmute_handler import UnmuteHandler
 
             handler = UnmuteHandler()
@@ -57,8 +55,8 @@ class TestUnmuteHandlerLifecycle:
 
     @pytest.mark.asyncio
     async def test_start_up_stt_creates_quest(self):
-        p1, p2, p3, p4 = _patch_handler_deps()
-        with p1, p2, p3, p4:
+        p1, p2 = _patch_handler_deps()
+        with p1, p2:
             from unmute.unmute_handler import UnmuteHandler
 
             fake_stt = MagicMock()
@@ -70,31 +68,6 @@ class TestUnmuteHandlerLifecycle:
                 await handler.start_up_stt()
             assert "stt" in handler.quest_manager.quests
 
-    @pytest.mark.asyncio
-    async def test_cleanup_shuts_down_recorder(self):
-        p1, p2, p3, p4 = _patch_handler_deps()
-        with p1, p2, p3, p4:
-            from unmute.unmute_handler import UnmuteHandler
-
-            fake_recorder = MagicMock()
-            fake_recorder.shutdown = AsyncMock()
-            with patch("unmute.unmute_handler.RECORDINGS_DIR", "/tmp/rec"):
-                with patch("unmute.unmute_handler.Recorder", return_value=fake_recorder):
-                    handler = UnmuteHandler()
-                    await handler.cleanup()
-                    fake_recorder.shutdown.assert_awaited_once()
-
-    @pytest.mark.asyncio
-    async def test_cleanup_no_recorder(self):
-        p1, p2, p3, p4 = _patch_handler_deps()
-        with p1, p2, p3, p4:
-            from unmute.unmute_handler import UnmuteHandler
-
-            handler = UnmuteHandler()
-            handler.recorder = None
-            await handler.cleanup()
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 # emit()
 # ─────────────────────────────────────────────────────────────────────────────
@@ -103,8 +76,8 @@ class TestUnmuteHandlerLifecycle:
 class TestUnmuteHandlerEmit:
     @pytest.mark.asyncio
     async def test_emit_returns_item_from_queue(self):
-        p1, p2, p3, p4 = _patch_handler_deps()
-        with p1, p2, p3, p4:
+        p1, p2 = _patch_handler_deps()
+        with p1, p2:
             import unmute.openai_realtime_api_events as ora
             from unmute.unmute_handler import UnmuteHandler
 
@@ -125,8 +98,8 @@ class TestUnmuteHandlerEmit:
 
 class TestUnmuteHandlerCopy:
     def test_copy_returns_new_instance(self):
-        p1, p2, p3, p4 = _patch_handler_deps()
-        with p1, p2, p3, p4:
+        p1, p2 = _patch_handler_deps()
+        with p1, p2:
             from unmute.unmute_handler import UnmuteHandler
 
             handler = UnmuteHandler()
@@ -143,8 +116,8 @@ class TestUnmuteHandlerCopy:
 class TestUnmuteHandlerReceive:
     @pytest.mark.asyncio
     async def test_receive_bot_speaking_updates_waiting_for_user_start(self):
-        p1, p2, p3, p4 = _patch_handler_deps()
-        with p1, p2, p3, p4:
+        p1, p2 = _patch_handler_deps()
+        with p1, p2:
             from unmute.unmute_handler import UnmuteHandler
 
             handler = UnmuteHandler()
@@ -169,8 +142,8 @@ class TestUnmuteHandlerReceive:
 
     @pytest.mark.asyncio
     async def test_receive_pause_detected(self):
-        p1, p2, p3, p4 = _patch_handler_deps()
-        with p1, p2, p3, p4:
+        p1, p2 = _patch_handler_deps()
+        with p1, p2:
             from unmute.unmute_handler import UnmuteHandler
 
             handler = UnmuteHandler()
@@ -198,8 +171,8 @@ class TestUnmuteHandlerReceive:
 
     @pytest.mark.asyncio
     async def test_receive_vad_interruption(self):
-        p1, p2, p3, p4 = _patch_handler_deps()
-        with p1, p2, p3, p4:
+        p1, p2 = _patch_handler_deps()
+        with p1, p2:
             from unmute.unmute_handler import UnmuteHandler
 
             handler = UnmuteHandler()
@@ -233,8 +206,8 @@ class TestUnmuteHandlerReceive:
 
     @pytest.mark.asyncio
     async def test_receive_flushing_finished_generates_response(self):
-        p1, p2, p3, p4 = _patch_handler_deps()
-        with p1, p2, p3, p4:
+        p1, p2 = _patch_handler_deps()
+        with p1, p2:
             from unmute.unmute_handler import UnmuteHandler
 
             handler = UnmuteHandler()
@@ -273,8 +246,8 @@ class TestUnmuteHandlerReceive:
 class TestUnmuteHandlerSttLoop:
     @pytest.mark.asyncio
     async def test_stt_loop_processes_word_messages(self):
-        p1, p2, p3, p4 = _patch_handler_deps()
-        with p1, p2, p3, p4:
+        p1, p2 = _patch_handler_deps()
+        with p1, p2:
             from unmute.stt.speech_to_text import STTWordMessage
             from unmute.unmute_handler import UnmuteHandler
 
@@ -306,8 +279,8 @@ class TestUnmuteHandlerSttLoop:
 
     @pytest.mark.asyncio
     async def test_stt_loop_ignores_marker_messages(self):
-        p1, p2, p3, p4 = _patch_handler_deps()
-        with p1, p2, p3, p4:
+        p1, p2 = _patch_handler_deps()
+        with p1, p2:
             from unmute.stt.speech_to_text import STTMarkerMessage
             from unmute.unmute_handler import UnmuteHandler
 
@@ -338,8 +311,8 @@ class TestUnmuteHandlerSttLoop:
 
     @pytest.mark.asyncio
     async def test_stt_loop_empty_text_skipped(self):
-        p1, p2, p3, p4 = _patch_handler_deps()
-        with p1, p2, p3, p4:
+        p1, p2 = _patch_handler_deps()
+        with p1, p2:
             from unmute.stt.speech_to_text import STTWordMessage
             from unmute.unmute_handler import UnmuteHandler
 
@@ -372,8 +345,8 @@ class TestUnmuteHandlerSttLoop:
 
     @pytest.mark.asyncio
     async def test_stt_loop_interrupts_bot_on_word(self):
-        p1, p2, p3, p4 = _patch_handler_deps()
-        with p1, p2, p3, p4:
+        p1, p2 = _patch_handler_deps()
+        with p1, p2:
             from unmute.stt.speech_to_text import STTWordMessage
             from unmute.unmute_handler import UnmuteHandler
 
@@ -413,8 +386,8 @@ class TestUnmuteHandlerSttLoop:
 class TestUnmuteHandlerInterruptBotHappy:
     @pytest.mark.asyncio
     async def test_interrupt_bot_success(self):
-        p1, p2, p3, p4 = _patch_handler_deps()
-        with p1, p2, p3, p4:
+        p1, p2 = _patch_handler_deps()
+        with p1, p2:
             from unmute.unmute_handler import UnmuteHandler
 
             handler = UnmuteHandler()
@@ -428,38 +401,6 @@ class TestUnmuteHandlerInterruptBotHappy:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# update_session - disallow_recording path
-# ─────────────────────────────────────────────────────────────────────────────
-
-
-class TestUnmuteHandlerUpdateSessionRecording:
-    @pytest.mark.asyncio
-    async def test_update_session_disallow_recording(self):
-        p1, p2, p3, p4 = _patch_handler_deps()
-        with p1, p2, p3, p4:
-            import unmute.openai_realtime_api_events as ora
-            from unmute.unmute_handler import UnmuteHandler
-
-            handler = UnmuteHandler()
-            handler.chatbot = MagicMock()
-
-            fake_recorder = MagicMock()
-            fake_recorder.add_event = AsyncMock()
-            fake_recorder.shutdown = AsyncMock()
-            handler.recorder = fake_recorder
-
-            session = ora.SessionConfig(
-                instructions=None,
-                voice="alloy",
-                allow_recording=False,
-            )
-            await handler.update_session(session)
-
-            fake_recorder.shutdown.assert_awaited_with(keep_recording=False)
-            assert handler.recorder is None
-
-
-# ─────────────────────────────────────────────────────────────────────────────
 # _tts_loop
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -467,8 +408,8 @@ class TestUnmuteHandlerUpdateSessionRecording:
 class TestUnmuteHandlerTtsLoop:
     @pytest.mark.asyncio
     async def test_tts_loop_processes_audio_and_text(self):
-        p1, p2, p3, p4 = _patch_handler_deps()
-        with p1, p2, p3, p4:
+        p1, p2 = _patch_handler_deps()
+        with p1, p2:
             from unmute.tts.text_to_speech import TTSAudioMessage, TTSTextMessage
             from unmute.unmute_handler import UnmuteHandler
 
@@ -504,8 +445,8 @@ class TestUnmuteHandlerTtsLoop:
 
     @pytest.mark.asyncio
     async def test_tts_loop_empty_text_message_skipped(self):
-        p1, p2, p3, p4 = _patch_handler_deps()
-        with p1, p2, p3, p4:
+        p1, p2 = _patch_handler_deps()
+        with p1, p2:
             from unmute.tts.text_to_speech import TTSTextMessage
             from unmute.unmute_handler import UnmuteHandler
 
@@ -546,8 +487,8 @@ class TestUnmuteHandlerTtsLoop:
 class TestUnmuteHandlerGenerateResponseTask:
     @pytest.mark.asyncio
     async def test_generate_response_task_emits_response_created(self):
-        p1, p2, p3, p4 = _patch_handler_deps()
-        with p1, p2, p3, p4:
+        p1, p2 = _patch_handler_deps()
+        with p1, p2:
             import unmute.openai_realtime_api_events as ora
             from unmute.unmute_handler import UnmuteHandler
 

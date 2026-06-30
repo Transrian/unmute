@@ -316,8 +316,6 @@ async def receive_loop(
             )
             continue
 
-        message_to_record = message
-
         if isinstance(message, ora.InputAudioBufferAppend):
             opus_bytes = base64.b64decode(message.audio)
             if wait_for_first_opus:
@@ -330,10 +328,6 @@ async def receive_loop(
                     continue
             pcm = await asyncio.to_thread(opus_reader.append_bytes, opus_bytes)
 
-            message_to_record = ora.UnmuteInputAudioBufferAppendAnonymized(
-                number_of_samples=pcm.size,
-            )
-
             if pcm.size:
                 await handler.receive((SAMPLE_RATE, pcm[np.newaxis, :]))
         elif isinstance(message, ora.SessionUpdate):
@@ -342,9 +336,6 @@ async def receive_loop(
 
         else:
             logger.info("Ignoring message:", str(message)[:100])
-
-        if message_to_record is not None and handler.recorder is not None:
-            await handler.recorder.add_event("client", message_to_record)
 
 
 class EmitDebugLogger:
@@ -409,9 +400,6 @@ async def emit_loop(
                     continue
 
         emit_debug_logger.on_emit(to_emit)
-
-        if handler.recorder is not None:
-            await handler.recorder.add_event("server", to_emit)
 
         try:
             await websocket.send_text(to_emit.model_dump_json())

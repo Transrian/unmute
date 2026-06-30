@@ -18,7 +18,6 @@ os.environ.pop("KYUTAI_LLM_API_KEY", None)
 os.environ.pop("KYUTAI_STT_URL", None)
 os.environ.pop("KYUTAI_TTS_URL", None)
 os.environ.pop("KYUTAI_REDIS_URL", None)
-os.environ.pop("KYUTAI_RECORDINGS_DIR", None)
 os.environ.pop("NEWSAPI_API_KEY", None)
 os.environ.pop("FREESOUND_API_KEY", None)
 
@@ -115,12 +114,10 @@ class FakeTextToSpeech:
         self,
         messages: list[dict] | None = None,
         voice: str | None = None,
-        recorder=None,
         get_time=None,
         tts_instance: str = "ws://fake-tts:8080",
     ):
         self.tts_instance = tts_instance
-        self.recorder = recorder
         self.messages = messages or []
         self.message_index = 0
         self.voice = voice
@@ -199,14 +196,6 @@ class FakeVLLMStream:
 # ──────────────────────────────────────────────────────────────
 # Fixtures
 # ──────────────────────────────────────────────────────────────
-
-@pytest.fixture
-def tmp_recording_dir(tmp_path: Path) -> Path:
-    """Create a temporary directory for recordings."""
-    recording_dir = tmp_path / "recordings"
-    recording_dir.mkdir()
-    return recording_dir
-
 
 @pytest.fixture
 def fake_stt_messages() -> list[dict]:

@@ -54,7 +54,6 @@ unmute/                          ← Root
 │   │   ├── quest_manager.py     ← Async task lifecycle manager (init → run → close pattern)
 │   │   ├── service_discovery.py ← Service instance discovery (DNS-based, Redis optional)
 │   │   ├── cache.py             ← Cache abstraction (Local dict or Redis)
-│   │   ├── recorder.py          ← Session event recording (JSONL files)
 │   │   ├── exceptions.py        ← Custom exception types
 │   │   ├── metrics.py           ← Prometheus metrics definitions
 │   │   ├── timer.py             ← Stopwatch utilities
@@ -62,7 +61,6 @@ unmute/                          ← Root
 │   │   ├── webrtc_utils.py      ← WebRTC utilities
 │   │   ├── audio_input_override.py  ← Debug: inject audio file instead of mic
 │   │   ├── audio_stream_saver.py    ← Audio stream persistence
-│   │   ├── process_recording.py     ← Recording post-processing
 │   │   │
 │   │   ├── stt/                 ← Speech-to-Text client
 │   │   │   ├── speech_to_text.py          ← STT WebSocket client (msgpack protocol, VAD pause prediction)
@@ -178,10 +176,8 @@ Browser microphone
 | `audioUtil.ts` | Opus encode/decode helpers |
 | `chatHistory.ts` | Chat message compression utilities |
 | `CouldNotConnect.tsx` | Error screen when backend is unreachable |
-| `ConsentModal.tsx` | Recording consent dialog |
-| `useRecordingCanvas.ts` | Canvas-based conversation recording |
 | `ErrorMessages.tsx` | Toast-style error message display (auto-dismiss after 10s) |
-| `layout.tsx` | Root layout — sets page metadata, loads Satoshi font, mounts ConsentModal |
+| `layout.tsx` | Root layout — sets page metadata, loads Satoshi font |
 | `page.tsx` | Home page — renders the `<Unmute />` component |
 | `Modal.tsx` | Hover/click-triggered modal (positioned on desktop, fullscreen on mobile) |
 | `SingleRoleSubtitles.tsx` | Subtitles for a single speaker with word-wrapping and max line count |

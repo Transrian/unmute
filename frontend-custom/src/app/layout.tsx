@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import localFont from "next/font/local";
-import ConsentModal from "./ConsentModal";
 
 export const metadata: Metadata = {
   title: "Unmute by Kyutai",
@@ -34,7 +33,6 @@ export default function RootLayout({
     <html lang="en" className={satoshi.className}>
       <body>
         {children}
-        <ConsentModal />
       </body>
     </html>
   );

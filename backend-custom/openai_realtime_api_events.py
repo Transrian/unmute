@@ -67,7 +67,6 @@ class SessionConfig(BaseModel):
     # The "Instructions" object is an Unmute extension
     instructions: Instructions | None = None
     voice: str | None = None
-    allow_recording: bool
 
 
 class SessionUpdate(BaseEvent[Literal["session.update"]]):
@@ -80,17 +79,6 @@ class SessionUpdated(BaseEvent[Literal["session.updated"]]):
 
 class InputAudioBufferAppend(BaseEvent[Literal["input_audio_buffer.append"]]):
     audio: str  # Base64-encoded Opus data
-
-
-class UnmuteInputAudioBufferAppendAnonymized(
-    BaseEvent[Literal["unmute.input_audio_buffer.append_anonymized"]]
-):
-    """
-    For recording, an anonymous version of InputAudioBufferAppend that only says
-    how many samples were appended, not the actual audio data.
-    """
-
-    number_of_samples: int
 
 
 class InputAudioBufferSpeechStarted(
@@ -159,12 +147,6 @@ class UnmuteResponseTextDeltaReady(
     delta: str
 
 
-class UnmuteResponseAudioDeltaReady(
-    BaseEvent[Literal["unmute.response.audio.delta.ready"]]
-):
-    number_of_samples: int
-
-
 class UnmuteInterruptedByVAD(BaseEvent[Literal["unmute.interrupted_by_vad"]]):
     """The VAD interrupted the response generation."""
 
@@ -182,7 +164,6 @@ ServerEvent = Union[
     InputAudioBufferSpeechStarted,
     InputAudioBufferSpeechStopped,
     UnmuteResponseTextDeltaReady,
-    UnmuteResponseAudioDeltaReady,
     UnmuteInterruptedByVAD,
 ]
 
@@ -190,8 +171,6 @@ ServerEvent = Union[
 ClientEvent = Union[
     SessionUpdate,
     InputAudioBufferAppend,
-    # Used internally for recording, we're not expecting the user to send this
-    UnmuteInputAudioBufferAppendAnonymized,
 ]
 
 Event = ClientEvent | ServerEvent

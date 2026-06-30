@@ -19,7 +19,6 @@ from unmute.audio_input_override import AudioInputOverride
 from unmute.exceptions import make_ora_error
 from unmute.kyutai_constants import (
     FRAME_TIME_SEC,
-    RECORDINGS_DIR,
     SAMPLE_RATE,
     SAMPLES_PER_FRAME,
 )
@@ -32,7 +31,6 @@ from unmute.llm.llm_utils import (
     rechunk_to_words,
 )
 from unmute.quest_manager import Quest, QuestManager
-from unmute.recorder import Recorder
 from unmute.service_discovery import find_instance
 from unmute.stt.speech_to_text import SpeechToText, STTMarkerMessage
 from unmute.timer import Stopwatch
@@ -76,7 +74,6 @@ class UnmuteHandler(AsyncStreamHandler):
         )
         self.n_samples_received = 0  # Used for measuring time
         self.output_queue: asyncio.Queue[HandlerOutput] = asyncio.Queue()
-        self.recorder = Recorder(RECORDINGS_DIR) if RECORDINGS_DIR else None
 
         self.quest_manager = QuestManager()
 
@@ -96,10 +93,6 @@ class UnmuteHandler(AsyncStreamHandler):
             self.audio_input_override = AudioInputOverride(AUDIO_INPUT_OVERRIDE)
         else:
             self.audio_input_override = None
-
-    async def cleanup(self):
-        if self.recorder is not None:
-            await self.recorder.shutdown()
 
     @property
     def stt(self) -> SpeechToText | None:
@@ -398,7 +391,6 @@ class UnmuteHandler(AsyncStreamHandler):
         async def _init() -> TextToSpeech:
             factory = partial(
                 TextToSpeech,
-                recorder=self.recorder,
                 get_time=self.audio_received_sec,
                 voice=self.tts_voice,
             )
@@ -547,9 +539,3 @@ class UnmuteHandler(AsyncStreamHandler):
 
         if session.voice:
             self.tts_voice = session.voice
-
-        if not session.allow_recording and self.recorder:
-            await self.recorder.add_event("client", ora.SessionUpdate(session=session))
-            await self.recorder.shutdown(keep_recording=False)
-            self.recorder = None
-            logger.info("Recording disabled for a session.")

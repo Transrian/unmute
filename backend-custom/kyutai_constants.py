@@ -1,5 +1,4 @@
 import os
-from pathlib import Path
 
 from unmute.websocket_utils import http_to_ws
 
@@ -16,10 +15,6 @@ REDIS_SERVER = os.environ.get("KYUTAI_REDIS_URL")
 
 SPEECH_TO_TEXT_PATH = "/api/asr-streaming"
 TEXT_TO_SPEECH_PATH = "/api/tts_streaming"
-
-# If None, recordings will not be saved
-_recordings_dir = os.environ.get("KYUTAI_RECORDINGS_DIR")
-RECORDINGS_DIR = Path(_recordings_dir) if _recordings_dir else None
 
 SAMPLE_RATE = 24000
 SAMPLES_PER_FRAME = 1920
