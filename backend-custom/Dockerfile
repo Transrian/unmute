@@ -11,7 +11,7 @@ COPY . .
 ENV HOSTNAME="0.0.0.0"
 
 HEALTHCHECK --start-period=15s \
-    CMD curl --fail http://localhost:80/metrics || exit 1
+    CMD curl --fail http://localhost:80/v1/health || exit 1
 
 FROM build AS prod
 CMD ["uv", "run", "--no-dev", "uvicorn", "unmute.main_websocket:app", "--host", "0.0.0.0", "--port", "80", "--ws-per-message-deflate=false"]
