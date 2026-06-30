@@ -116,6 +116,17 @@ class SpeechToText(ServiceWithStartup):
     async def send_marker(self, id: int) -> None:
         await self._send({"type": "Marker", "id": id})
 
+    async def send_end_of_audio(self) -> None:
+        """Signal end of audio input by sending a null byte.
+
+        The STT server closes the connection upon receiving \0,
+        which causes the __aiter__ iterator to finish naturally.
+        """
+        if self.websocket:
+            await self.websocket.send(b"\0")
+        else:
+            logger.warning("Can't send end-of-audio — STT websocket not connected")
+
     async def _send(self, data: dict) -> None:
         """Send an arbitrary message to the STT server."""
         to_send = msgpack.packb(data, use_bin_type=True, use_single_float=True)

@@ -10,6 +10,7 @@ import requests
 import sphn
 from fastapi import (
     FastAPI,
+    UploadFile,
     WebSocket,
     WebSocketDisconnect,
     status,
@@ -19,12 +20,11 @@ from fastapi.responses import JSONResponse
 from fastapi.websockets import WebSocketState
 from fastrtc import CloseStream, audio_to_float32
 from pydantic import BaseModel, Field, TypeAdapter, ValidationError, computed_field
-from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.responses import Response
-from starlette.types import ASGIApp
 
 import unmute.openai_realtime_api_events as ora
+from unmute.audio_codec import decode_audio_to_pcm, encode_pcm_to_audio
 from unmute.exceptions import (
     MissingServiceAtCapacity,
     MissingServiceTimeout,
@@ -32,14 +32,25 @@ from unmute.exceptions import (
     make_ora_error,
 )
 from unmute.kyutai_constants import (
+    FRAME_TIME_SEC,
     KYUTAI_LLM_API_KEY,
     LLM_SERVER,
     SAMPLE_RATE,
+    SAMPLES_PER_FRAME,
     STT_SERVER,
     TTS_SERVER,
 )
 from unmute.service_discovery import async_ttl_cached
+from unmute.stt.speech_to_text import (
+    SpeechToText,
+    STTWordMessage,
+)
 from unmute.timer import Stopwatch
+from unmute.tts.text_to_speech import (
+    TextToSpeech,
+    TTSAudioMessage,
+    TTSClientEosMessage,
+)
 from unmute.tts.voices import VoiceList
 from unmute.unmute_handler import UnmuteHandler
 
@@ -160,6 +171,145 @@ def voices():
         if voice.good
     ]
     return good_voices
+
+
+# ─── OpenAI-compatible audio endpoints ──────────────────────────────
+
+
+class TranscriptionResponse(BaseModel):
+    text: str
+
+
+class SpeechRequest(BaseModel):
+    model: str = "tts"  # ignored, for compatibility
+    input: str
+    voice: str = "constant"
+    response_format: str = "mp3"
+    speed: float = 1.0  # ignored, for compatibility
+
+
+async def _transcribe_one_shot(audio_data: bytes, filename: str) -> str:
+    """One-shot transcription: decode audio → send to STT → collect words."""
+    # Decode to mono float32 PCM at 24 kHz
+    pcm = decode_audio_to_pcm(audio_data, filename, target_sample_rate=SAMPLE_RATE)
+
+    stt = SpeechToText()
+    await stt.start_up()
+
+    # Collect messages from STT in a background task
+    messages: list[STTWordMessage] = []
+
+    async def _collect_messages():
+        try:
+            async for msg in stt:
+                if isinstance(msg, STTWordMessage):
+                    messages.append(msg)
+        except Exception:
+            logger.exception("Error in STT message collector")
+
+    collect_task = asyncio.create_task(_collect_messages())
+
+    try:
+        # Send audio in frames
+        for offset in range(0, len(pcm), SAMPLES_PER_FRAME):
+            chunk = pcm[offset : offset + SAMPLES_PER_FRAME]
+            if len(chunk) < SAMPLES_PER_FRAME:
+                chunk = np.pad(chunk, (0, SAMPLES_PER_FRAME - len(chunk)))
+            await stt.send_audio(chunk)
+
+        # Signal end of audio: the STT server closes the connection on \0,
+        # which causes the __aiter__ iterator to finish naturally.
+        await stt.send_end_of_audio()
+    finally:
+        # Wait for the collector to finish (iterator ends when server closes)
+        await collect_task
+        await stt.shutdown()
+
+    # Extract text from word messages
+    return "".join(m.text for m in messages)
+
+
+async def _synthesize_one_shot(text: str, voice: str) -> tuple[np.ndarray, int]:
+    """One-shot synthesis: send text to TTS → collect PCM audio.
+
+    Returns:
+        Tuple of (pcm_array, sample_rate).
+    """
+    tts = TextToSpeech(voice=voice)
+    await tts.start_up()
+
+    audio_chunks: list[list[float]] = []
+
+    async def _collect_audio():
+        try:
+            async for msg in tts:
+                if isinstance(msg, TTSAudioMessage):
+                    audio_chunks.append(msg.pcm)
+        except Exception:
+            logger.exception("Error in TTS audio collector")
+
+    collect_task = asyncio.create_task(_collect_audio())
+
+    try:
+        await tts.send(text)
+        await tts.send(TTSClientEosMessage())
+        # Wait for the collector to finish naturally.
+        # The TTS server closes the connection after processing EOS,
+        # which ends the __aiter__ iterator and drains the output queue.
+        await collect_task
+    finally:
+        await tts.shutdown()
+
+    if not audio_chunks:
+        return np.array([], dtype=np.float32), SAMPLE_RATE
+
+    return np.concatenate([np.array(chunk, dtype=np.float32) for chunk in audio_chunks]), SAMPLE_RATE
+
+
+@app.post("/v1/audio/transcriptions")
+async def transcribe(audio: UploadFile):
+    """OpenAI-compatible audio transcription endpoint.
+
+    Accepts an audio file upload and returns the transcribed text.
+    Supports: wav, mp3, flac, m4a, ogg, webm.
+    """
+    try:
+        audio_data = await audio.read()
+        text = await _transcribe_one_shot(audio_data, audio.filename or "audio.wav")
+        return TranscriptionResponse(text=text)
+    except Exception as e:
+        logger.exception("Transcription failed")
+        return JSONResponse(
+            status_code=500,
+            content={"error": {"message": str(e), "type": "server_error"}},
+        )
+
+
+@app.post("/v1/audio/speech")
+async def synthesize(request: SpeechRequest):
+    """OpenAI-compatible text-to-speech endpoint.
+
+    Accepts text and voice parameters, returns synthesized audio.
+    Supports output formats: mp3, wav, flac, ogg.
+    """
+    try:
+        pcm, sr = await _synthesize_one_shot(request.input, request.voice)
+        if len(pcm) == 0:
+            return JSONResponse(
+                status_code=400,
+                content={"error": {"message": "No audio generated", "type": "validation_error"}},
+            )
+
+        audio_bytes, mime_type = encode_pcm_to_audio(
+            pcm, format=request.response_format, sample_rate=sr
+        )
+        return Response(content=audio_bytes, media_type=mime_type)
+    except Exception as e:
+        logger.exception("Speech synthesis failed")
+        return JSONResponse(
+            status_code=500,
+            content={"error": {"message": str(e), "type": "server_error"}},
+        )
 
 
 @app.websocket("/v1/realtime")

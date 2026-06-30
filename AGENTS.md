@@ -47,7 +47,8 @@ unmute/                          ← Root
 │   ├── voices.yaml              ← Voice character definitions (name, instructions, voice path)
 │   │
 │   ├── unmute/                  ← Python package
-│   │   ├── main_websocket.py    ← ⭐ MAIN ENTRY POINT — FastAPI app, WebSocket routes, HTTP endpoints
+│   │   ├── main_websocket.py    ← ⭐ MAIN ENTRY POINT — FastAPI app, WebSocket routes, HTTP endpoints + OpenAI /v1/audio/ endpoints
+│   │   ├── audio_codec.py       ← Audio decode/encode utilities (PyAV: file↔PCM at 24kHz mono)
 │   │   ├── unmute_handler.py    ← ⭐ CORE LOGIC — UnmuteHandler class (conversation state machine)
 │   │   ├── kyutai_constants.py  ← Environment variable constants (server URLs, sample rate, etc.)
 │   │   ├── openai_realtime_api_events.py ← WebSocket message type definitions (Pydantic models)
@@ -125,6 +126,21 @@ Browser microphone
 - **Frontend ↔ Backend**: JSON over WebSocket, OpenAI Realtime API-compatible messages
 - **Backend ↔ STT/TTS**: msgpack over WebSocket (binary protocol)
 - **Backend ↔ LLM**: OpenAI-compatible REST API streaming (uses `openai` Python SDK)
+- **OpenAI /v1/audio/ endpoints**: REST HTTP for one-shot transcription and speech synthesis
+
+### OpenAI-Compatible Audio Endpoints (`main_websocket.py`)
+
+Two one-shot HTTP endpoints that reuse the existing `SpeechToText` and `TextToSpeech` WS clients:
+
+| Endpoint | Method | Input | Output | Description |
+|----------|--------|-------|--------|-------------|
+| `/v1/audio/transcriptions` | POST | Audio file (`multipart/form-data`, field `audio`) | `{"text": "..."}` | Transcribe audio to text |
+| `/v1/audio/speech` | POST | JSON `{"input", "voice", "response_format"}` | Audio bytes (`mp3`/`wav`/`flac`/`ogg`) | Synthesize speech from text |
+
+- Audio codec: `audio_codec.py` uses PyAV (`av` package) for decode (any format → 24kHz mono float32 PCM) and encode (PCM → requested format)
+- Supported input formats: wav, mp3, flac, m4a, ogg, webm
+- Supported output formats: mp3, wav, flac, ogg
+- Voice parameter accepts any voice name from `voices.yaml`
 
 ---
 
@@ -196,6 +212,8 @@ Browser microphone
 | `Quest` names used | `backend-custom/unmute/unmute_handler.py` | `"stt"` (always running), `"tts"` (per-turn), `"llm"` (per-turn) |
 | `VoiceList` | `backend-custom/unmute/tts/voices.py` | Loads `voices.yaml`, provides voice metadata to frontend |
 | `RealtimeQueue` | `backend-custom/unmute/tts/realtime_queue.py` | Time-aware queue for synchronizing TTS audio/text output |
+| `decode_audio_to_pcm()` | `backend-custom/unmute/audio_codec.py` | Decode audio file → mono float32 PCM at 24kHz (PyAV) |
+| `encode_pcm_to_audio()` | `backend-custom/unmute/audio_codec.py` | Encode PCM → mp3/wav/flac/ogg (PyAV) |
 
 ---
 
