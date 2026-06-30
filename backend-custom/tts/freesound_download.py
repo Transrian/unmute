@@ -130,7 +130,7 @@ def process_sound(input_path: Path, output_path: Path, start_time: int):
             raise RuntimeError("FFmpeg failed")
 
 
-repo_root = Path(__file__).parents[2]
+repo_root = Path(__file__).parents[1]
 OUTPUT_DIR = repo_root / "voices"
 
 ALLOWED_LICENSES = [

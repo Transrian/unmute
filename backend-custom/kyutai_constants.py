@@ -20,7 +20,7 @@ REDIS_SERVER = os.environ.get("KYUTAI_REDIS_URL")
 SPEECH_TO_TEXT_PATH = "/api/asr-streaming"
 TEXT_TO_SPEECH_PATH = "/api/tts_streaming"
 
-repo_root = Path(__file__).parents[1]
+repo_root = Path(__file__).parent
 VOICE_DONATION_DIR = Path(
     os.environ.get("KYUTAI_VOICE_DONATION_DIR", repo_root / "voices" / "donation")
 )

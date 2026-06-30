@@ -27,13 +27,9 @@ User microphone → STT (transcription) → LLM (text response) → TTS (speech 
 unmute/                          ← Root
 ├── AGENTS.md                    ← You are here
 ├── README_CUSTOM.md             ← Custom setup notes
-├── pyproject.toml               ← Python project config (FastAPI, deps, tooling)
-├── uv.lock                      ← Locked Python dependencies
-├── voices.yaml                  ← Voice character definitions (name, instructions, voice path)
 ├── .env                         ← Environment variables (LLM URL, model, API key)
 │
 ├── docker-compose-custom.yml    ← Custom compose (no Traefik, no vLLM, external LLM, GPU 1 pinned)
-├── Dockerfile                   ← Backend Docker image (uv-based, hot-reload + prod targets)
 ├── .dockerignore                ← Patterns excluded from Docker builds
 │
 ├── frontend-custom/             ← Custom frontend (Next.js 15, React 19, TypeScript)
@@ -44,45 +40,51 @@ unmute/                          ← Root
 │   ├── public/                  ← Static assets (Opus encoder/decoder WebAssembly workers)
 │   └── src/app/                 ← All frontend source
 │
-├── backend-custom/              ← Custom backend (FastAPI)
-│   ├── main_websocket.py        ← ⭐ MAIN ENTRY POINT — FastAPI app, WebSocket routes, HTTP endpoints
-│   ├── unmute_handler.py        ← ⭐ CORE LOGIC — UnmuteHandler class (conversation state machine)
-│   ├── kyutai_constants.py      ← Environment variable constants (server URLs, sample rate, etc.)
-│   ├── openai_realtime_api_events.py ← WebSocket message type definitions (Pydantic models)
-│   ├── quest_manager.py         ← Async task lifecycle manager (init → run → close pattern)
-│   ├── service_discovery.py     ← Service instance discovery (DNS-based, Redis optional)
-│   ├── cache.py                 ← Cache abstraction (Local dict or Redis)
-│   ├── recorder.py              ← Session event recording (JSONL files)
-│   ├── exceptions.py            ← Custom exception types
-│   ├── metrics.py               ← Prometheus metrics definitions
-│   ├── timer.py                 ← Stopwatch utilities
-│   ├── websocket_utils.py       ← HTTP↔WS URL conversion helpers
-│   ├── webrtc_utils.py          ← WebRTC utilities
-│   ├── audio_input_override.py  ← Debug: inject audio file instead of mic
-│   ├── audio_stream_saver.py    ← Audio stream persistence
-│   ├── process_recording.py     ← Recording post-processing
+├── backend-custom/              ← Custom backend (FastAPI) — self-contained build context
+│   ├── Dockerfile               ← Backend Docker image (uv-based, hot-reload + prod targets)
+│   ├── pyproject.toml           ← Python project config (FastAPI, deps, tooling)
+│   ├── uv.lock                  ← Locked Python dependencies
+│   ├── voices.yaml              ← Voice character definitions (name, instructions, voice path)
 │   │
-│   ├── stt/                     ← Speech-to-Text client
-│   │   ├── speech_to_text.py    ← STT WebSocket client (msgpack protocol, VAD pause prediction)
-│   │   ├── exponential_moving_average.py ← EMA smoothing for pause detection
-│   │   └── dummy_speech_to_text.py ← Mock STT for testing
-│   │
-│   ├── tts/                     ← Text-to-Speech client + voice management
-│   │   ├── text_to_speech.py    ← TTS WebSocket client (msgpack protocol, realtime queue)
-│   │   ├── realtime_queue.py    ← Time-aware queue for audio/text synchronization
-│   │   ├── voice_cloning.py     ← Voice cloning via external server + cache
-│   │   ├── voices.py            ← VoiceList loader (voices.yaml parser, upload utilities)
-│   │   └── ...                  ← Voice donation pipeline scripts
-│   │
-│   ├── llm/                     ← LLM integration
-│   │   ├── chatbot.py           ← Chat history management, conversation state machine
-│   │   ├── llm_utils.py         ← OpenAI client wrapper, VLLMStream, message preprocessing
-│   │   ├── system_prompt.py     ← System prompt templates (smalltalk, quiz, news, etc.)
-│   │   ├── newsapi.py           ← News fetching from The Verge via NewsAPI
-│   │   └── quiz_show_questions.py ← Quiz show question bank
-│   │
-│   ├── loadtest/                ← Load testing tools
-│   └── scripts/                 ← Utility scripts (examples, voice management)
+│   ├── unmute/                  ← Python package
+│   │   ├── main_websocket.py    ← ⭐ MAIN ENTRY POINT — FastAPI app, WebSocket routes, HTTP endpoints
+│   │   ├── unmute_handler.py    ← ⭐ CORE LOGIC — UnmuteHandler class (conversation state machine)
+│   │   ├── kyutai_constants.py  ← Environment variable constants (server URLs, sample rate, etc.)
+│   │   ├── openai_realtime_api_events.py ← WebSocket message type definitions (Pydantic models)
+│   │   ├── quest_manager.py     ← Async task lifecycle manager (init → run → close pattern)
+│   │   ├── service_discovery.py ← Service instance discovery (DNS-based, Redis optional)
+│   │   ├── cache.py             ← Cache abstraction (Local dict or Redis)
+│   │   ├── recorder.py          ← Session event recording (JSONL files)
+│   │   ├── exceptions.py        ← Custom exception types
+│   │   ├── metrics.py           ← Prometheus metrics definitions
+│   │   ├── timer.py             ← Stopwatch utilities
+│   │   ├── websocket_utils.py   ← HTTP↔WS URL conversion helpers
+│   │   ├── webrtc_utils.py      ← WebRTC utilities
+│   │   ├── audio_input_override.py  ← Debug: inject audio file instead of mic
+│   │   ├── audio_stream_saver.py    ← Audio stream persistence
+│   │   ├── process_recording.py     ← Recording post-processing
+│   │   │
+│   │   ├── stt/                 ← Speech-to-Text client
+│   │   │   ├── speech_to_text.py          ← STT WebSocket client (msgpack protocol, VAD pause prediction)
+│   │   │   ├── exponential_moving_average.py ← EMA smoothing for pause detection
+│   │   │   └── dummy_speech_to_text.py    ← Mock STT for testing
+│   │   │
+│   │   ├── tts/                 ← Text-to-Speech client + voice management
+│   │   │   ├── text_to_speech.py    ← TTS WebSocket client (msgpack protocol, realtime queue)
+│   │   │   ├── realtime_queue.py    ← Time-aware queue for audio/text synchronization
+│   │   │   ├── voice_cloning.py     ← Voice cloning via external server + cache
+│   │   │   ├── voices.py            ← VoiceList loader (voices.yaml parser, upload utilities)
+│   │   │   └── ...                  ← Voice donation pipeline scripts
+│   │   │
+│   │   ├── llm/                 ← LLM integration
+│   │   │   ├── chatbot.py             ← Chat history management, conversation state machine
+│   │   │   ├── llm_utils.py           ← OpenAI client wrapper, VLLMStream, message preprocessing
+│   │   │   ├── system_prompt.py       ← System prompt templates (smalltalk, quiz, news, etc.)
+│   │   │   ├── newsapi.py             ← News fetching from The Verge via NewsAPI
+│   │   │   └── quiz_show_questions.py ← Quiz show question bank
+│   │   │
+│   │   ├── loadtest/            ← Load testing tools
+│   │   └── scripts/             ← Utility scripts (examples, voice management)
 │
 ├── services/                    ← External service configs and Dockerfiles
 │   ├── moshi-server/            ← Kyutai's moshi-server (Rust binary, STT+TTS)
@@ -140,11 +142,11 @@ Browser microphone
 ## Key Entry Points
 
 - **Start the system**: `docker compose -f docker-compose-custom.yml up --build`
-- **Backend entry**: `backend-custom/main_websocket.py` — FastAPI app with `uvicorn`
+- **Backend entry**: `backend-custom/unmute/main_websocket.py` — FastAPI app with `uvicorn`
 - **Frontend entry**: `frontend-custom/src/app/page.tsx` → `Unmute.tsx` (main React component)
-- **Conversation orchestration**: `backend-custom/unmute_handler.py` — `UnmuteHandler` class (state machine)
-- **WebSocket protocol types**: `backend-custom/openai_realtime_api_events.py` — all message schemas
-- **Voice definitions**: `voices.yaml` — character names, instructions, voice file paths
+- **Conversation orchestration**: `backend-custom/unmute/unmute_handler.py` — `UnmuteHandler` class (state machine)
+- **WebSocket protocol types**: `backend-custom/unmute/openai_realtime_api_events.py` — all message schemas
+- **Voice definitions**: `backend-custom/voices.yaml` — character names, instructions, voice file paths
 
 ---
 
@@ -204,15 +206,15 @@ Browser microphone
 
 | Class | File | Role |
 |-------|------|------|
-| `UnmuteHandler` | `backend-custom/unmute_handler.py` | Core conversation state machine — orchestrates STT→LLM→TTS pipeline, handles interruptions, turn transitions |
-| `Chatbot` | `backend-custom/llm/chatbot.py` | Chat history management, conversation state (`waiting_for_user` / `user_speaking` / `bot_speaking`) |
-| `SpeechToText` | `backend-custom/stt/speech_to_text.py` | STT WebSocket client — sends audio, receives transcriptions + VAD pause predictions |
-| `TextToSpeech` | `backend-custom/tts/text_to_speech.py` | TTS WebSocket client — sends text, receives PCM audio + text timing |
-| `VLLMStream` | `backend-custom/llm/llm_utils.py` | OpenAI-compatible LLM streaming wrapper |
-| `Quest` / `QuestManager` | `backend-custom/quest_manager.py` | Async task lifecycle manager — init→run→close with cancellation support |
-| `Quest` names used | `backend-custom/unmute_handler.py` | `"stt"` (always running), `"tts"` (per-turn), `"llm"` (per-turn) |
-| `VoiceList` | `backend-custom/tts/voices.py` | Loads `voices.yaml`, provides voice metadata to frontend |
-| `RealtimeQueue` | `backend-custom/tts/realtime_queue.py` | Time-aware queue for synchronizing TTS audio/text output |
+| `UnmuteHandler` | `backend-custom/unmute/unmute_handler.py` | Core conversation state machine — orchestrates STT→LLM→TTS pipeline, handles interruptions, turn transitions |
+| `Chatbot` | `backend-custom/unmute/llm/chatbot.py` | Chat history management, conversation state (`waiting_for_user` / `user_speaking` / `bot_speaking`) |
+| `SpeechToText` | `backend-custom/unmute/stt/speech_to_text.py` | STT WebSocket client — sends audio, receives transcriptions + VAD pause predictions |
+| `TextToSpeech` | `backend-custom/unmute/tts/text_to_speech.py` | TTS WebSocket client — sends text, receives PCM audio + text timing |
+| `VLLMStream` | `backend-custom/unmute/llm/llm_utils.py` | OpenAI-compatible LLM streaming wrapper |
+| `Quest` / `QuestManager` | `backend-custom/unmute/quest_manager.py` | Async task lifecycle manager — init→run→close with cancellation support |
+| `Quest` names used | `backend-custom/unmute/unmute_handler.py` | `"stt"` (always running), `"tts"` (per-turn), `"llm"` (per-turn) |
+| `VoiceList` | `backend-custom/unmute/tts/voices.py` | Loads `voices.yaml`, provides voice metadata to frontend |
+| `RealtimeQueue` | `backend-custom/unmute/tts/realtime_queue.py` | Time-aware queue for synchronizing TTS audio/text output |
 
 ---
 
@@ -228,7 +230,7 @@ Interruption flow: `interrupt_bot()` cancels TTS + LLM quests, clears output que
 
 ---
 
-## Voices Configuration (`voices.yaml`)
+## Voices Configuration (`backend-custom/voices.yaml`)
 
 Each voice entry has:
 - `name`: Display name

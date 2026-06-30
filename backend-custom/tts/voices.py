@@ -175,7 +175,7 @@ class VoiceSample(BaseModel):
 
 class VoiceList:
     def __init__(self):
-        self.path = Path(__file__).parents[2] / "voices.yaml"
+        self.path = Path(__file__).parents[1] / "voices.yaml"
         with self.path.open() as f:
             self.voices = [VoiceSample(**sound) for sound in YAML().load(f)]
 
